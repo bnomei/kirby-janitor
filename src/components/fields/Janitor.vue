@@ -99,7 +99,7 @@ export default {
 			);
 		},
 		hasChanges() {
-			return Object.keys(this.$panel.content.changes()).length > 0;
+			return Object.keys(this.$store.getters["content/changes"]()).length > 0;
 		}
 	},
 
