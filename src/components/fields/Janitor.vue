@@ -146,7 +146,7 @@ export default {
 			if (this.autosave && this.hasChanges) {
 				// lock janitor button, press save and listen to `model.update` event
 				const saveButton = document.querySelector(
-					".k-panel .k-header-buttons .k-form-controls button:nth-child(2)"
+					".k-panel .k-header-buttons .k-form-buttons button:nth-child(2)"
 				);
 
 				// revert & save
