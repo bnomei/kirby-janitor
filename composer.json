@@ -1,7 +1,7 @@
 {
     "name": "bnomei/kirby3-janitor",
     "type": "kirby-plugin",
-    "version": "5.2.0",
+    "version": "5.2.1",
     "license": "MIT",
     "homepage": "https://github.com/bnomei/kirby3-janitor",
     "description": "Kirby Plugin for running commands like cleaning the cache from within the Panel, PHP code or a cronjob",
@@ -51,7 +51,7 @@
     },
     "require-dev": {
         "getkirby/cli": "^1.5.0",
-        "getkirby/cms": "5.0.0-beta.4",
+        "getkirby/cms": "5.0.0",
         "larastan/larastan": "^v3.0.0",
         "laravel/pint": "^1.13",
         "pestphp/pest": "^v3.5.1",

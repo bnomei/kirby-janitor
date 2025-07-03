@@ -333,7 +333,9 @@ export default {
 			textArea.select();
 			try {
 				if (document.execCommand("copy") === false) {
-					console.error("Using `navigator.clipboard` did not work most likely due to the Kirby Panel running on localhost or no https. Janitor then tried to copy with a textarea but that failed as well.");
+					console.error(
+						"Using `navigator.clipboard` did not work most likely due to the Kirby Panel running on localhost or no https. Janitor then tried to copy with a textarea but that failed as well."
+					);
 				}
 			} catch (error) {
 				console.error(error);
