@@ -106,7 +106,7 @@ export default {
 	created() {
 		this.eventHandler = () =>
 			sessionStorage.getItem(STORAGE_ID) && location.reload();
-		this.$panel.events.on("model.update", this.eventHandler);
+		window.panel.events.on("model.update", this.eventHandler);
 
 		if (sessionStorage.getItem(STORAGE_ID) === this.id) {
 			sessionStorage.removeItem(STORAGE_ID);
@@ -115,7 +115,7 @@ export default {
 	},
 
 	unmounted() {
-		this.$panel.events.off("model.update", this.eventHandler);
+		window.panel.events.off("model.update", this.eventHandler);
 	},
 
 	methods: {
@@ -253,7 +253,7 @@ export default {
 
 			if (notification) {
 				let [f, m] = notification;
-				this.$panel.notification[f](m);
+				window.panel.notification[f](m);
 			}
 
 			if (error) {
@@ -324,23 +324,30 @@ export default {
 			element.dispatchEvent(evt);
 		},
 
-		async copyToClipboard(content) {
-			if (navigator.clipboard && window.isSecureContext) {
-				await navigator.clipboard.writeText(content);
-			} else {
-				const textArea = document.createElement("textarea");
-				textArea.value = content;
-				textArea.style.position = "absolute";
-				textArea.style.left = "-999999px";
-				document.body.prepend(textArea);
-				textArea.select();
-				try {
-					document.execCommand("copy");
-				} catch (error) {
-					console.error(error);
-				} finally {
-					textArea.remove();
+		copyToClipboardWithTextarea(content) {
+			const textArea = document.createElement("textarea");
+			textArea.value = content;
+			textArea.style.position = "absolute";
+			textArea.style.left = "-999999px";
+			document.body.prepend(textArea);
+			textArea.select();
+			try {
+				if (document.execCommand("copy") === false) {
+					console.error("Using `navigator.clipboard` did not work most likely due to the Kirby Panel running on localhost or no https. Janitor then tried to copy with a textarea but that failed as well.");
 				}
+			} catch (error) {
+				console.error(error);
+			} finally {
+				textArea.remove();
+			}
+		},
+
+		async copyToClipboard(content) {
+			try {
+				await navigator.clipboard.writeText(content);
+			} catch (error) {
+				console.error(error);
+				this.copyToClipboardWithTextarea(content);
 			}
 		}
 	}
