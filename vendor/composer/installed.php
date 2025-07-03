@@ -1,8 +1,8 @@
 <?php return array(
     'root' => array(
-        'name' => 'bnomei/kirby3-janitor',
-        'pretty_version' => '5.2.2',
-        'version' => '5.2.2.0',
+        'name' => 'bnomei/kirby-janitor',
+        'pretty_version' => '5.3.0',
+        'version' => '5.3.0.0',
         'reference' => null,
         'type' => 'kirby-plugin',
         'install_path' => __DIR__ . '/../../',
@@ -10,9 +10,9 @@
         'dev' => false,
     ),
     'versions' => array(
-        'bnomei/kirby3-janitor' => array(
-            'pretty_version' => '5.2.2',
-            'version' => '5.2.2.0',
+        'bnomei/kirby-janitor' => array(
+            'pretty_version' => '5.3.0',
+            'version' => '5.3.0.0',
             'reference' => null,
             'type' => 'kirby-plugin',
             'install_path' => __DIR__ . '/../../',
