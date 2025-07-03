@@ -269,7 +269,7 @@ export default {
 			}
 
 			if (reload) {
-				location.reload();
+				setTimeout(() => location.reload(), this.cooldown || 0);
 			}
 
 			if (open) {

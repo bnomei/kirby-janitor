@@ -1,7 +1,7 @@
 {
     "name": "bnomei/kirby3-janitor",
     "type": "kirby-plugin",
-    "version": "5.2.1",
+    "version": "5.2.2",
     "license": "MIT",
     "homepage": "https://github.com/bnomei/kirby3-janitor",
     "description": "Kirby Plugin for running commands like cleaning the cache from within the Panel, PHP code or a cronjob",

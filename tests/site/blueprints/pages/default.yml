@@ -76,6 +76,7 @@ fields:
     type: janitor
     command: reload
     label: Reload Page Example
+    cooldown: 5000
     icon: refresh
     # help: returns `reload => true` to janitor
 
