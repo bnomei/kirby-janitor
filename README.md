@@ -2,10 +2,10 @@
 
 [![Kirby 5](https://flat.badgen.net/badge/Kirby/5?color=ECC748)](https://getkirby.com)
 ![PHP 8.2](https://flat.badgen.net/badge/PHP/8.2?color=4E5B93&icon=php&label)
-![Release](https://flat.badgen.net/packagist/v/bnomei/kirby3-janitor?color=ae81ff&icon=github&label)
-![Downloads](https://flat.badgen.net/packagist/dt/bnomei/kirby3-janitor?color=272822&icon=github&label)
-[![Coverage](https://flat.badgen.net/codeclimate/coverage/bnomei/kirby3-janitor?icon=codeclimate&label)](https://codeclimate.com/github/bnomei/kirby3-janitor)
-[![Maintainability](https://flat.badgen.net/codeclimate/maintainability/bnomei/kirby3-janitor?icon=codeclimate&label)](https://codeclimate.com/github/bnomei/kirby3-janitor/issues)
+![Release](https://flat.badgen.net/packagist/v/bnomei/kirby-janitor?color=ae81ff&icon=github&label)
+![Downloads](https://flat.badgen.net/packagist/dt/bnomei/kirby-janitor?color=272822&icon=github&label)
+[![Coverage](https://flat.badgen.net/codeclimate/coverage/bnomei/kirby-janitor?icon=codeclimate&label)](https://codeclimate.com/github/bnomei/kirby-janitor)
+[![Maintainability](https://flat.badgen.net/codeclimate/maintainability/bnomei/kirby-janitor?icon=codeclimate&label)](https://codeclimate.com/github/bnomei/kirby-janitor/issues)
 [![Discord](https://flat.badgen.net/badge/discord/bnomei?color=7289da&icon=discord&label)](https://discordapp.com/users/bnomei)
 [![Buymecoffee](https://flat.badgen.net/badge/icon/donate?icon=buymeacoffee&color=FF813F&label)](https://www.buymeacoffee.com/bnomei)
 
@@ -22,7 +22,7 @@ Janitor is a Kirby CMS Plugin for running commands.
 You have to use composer to install both the plugin and the CLI locally into your project:
 
 ```bash
-composer require getkirby/cli bnomei/kirby3-janitor
+composer require getkirby/cli bnomei/kirby-janitor
 ```
 
 > [!WARNING]
@@ -137,7 +137,7 @@ The `$model` will match the model of whatever page, file, user or site object yo
 
 ### Built in commands and examples
 
-This plugin comes with a [few commands](https://github.com/bnomei/kirby3-janitor/tree/master/commands) you might like to use yourself and some [example commands](https://github.com/bnomei/kirby3-janitor/tree/master/tests/site/commands) used to showcase the various options the button has (like how to change the icon or open a URL in a new tab). Some commands can be used in both panel and terminal. Others are limited in their use to either one of them. In the terminal you can use `--help` argument to view the help for each command.
+This plugin comes with a [few commands](https://github.com/bnomei/kirby-janitor/tree/master/commands) you might like to use yourself and some [example commands](https://github.com/bnomei/kirby-janitor/tree/master/tests/site/commands) used to showcase the various options the button has (like how to change the icon or open a URL in a new tab). Some commands can be used in both panel and terminal. Others are limited in their use to either one of them. In the terminal you can use `--help` argument to view the help for each command.
 
 - `janitor:backupzip`, creates a backup zip
 - `janitor:call`, calls a method on the current model with optional data parameter
@@ -154,13 +154,13 @@ This plugin comes with a [few commands](https://github.com/bnomei/kirby3-janitor
 - `janitor:thumbs`, process thumb jobs of a certain page or all pages
 - `janitor:tinker`, run a REPL session in terminal
 - `janitor:trash`, removes an entry from given cache by key or page (default: pages cache)
-- `janitor:undertaker`, backups a page and its subpages to a zip. You need to manually trigger it with a [hook](https://github.com/bnomei/kirby3-janitor/blob/master/tests/site/config/config.php).
+- `janitor:undertaker`, backups a page and its subpages to a zip. You need to manually trigger it with a [hook](https://github.com/bnomei/kirby-janitor/blob/master/tests/site/config/config.php).
 
 The plugin will register these commands starting with `janitor:*` automatically - no copying required.<br>But if you want to re-use any of the other example provided you need to copy them to your `site/commands`-folder
 
 ### Blueprint field options
 
-The button you create with the `field: janitor` in your blueprint can be configured to do various things. Checkout the [example default.yml blueprint](https://github.com/bnomei/kirby3-janitor/blob/master/tests/site/blueprints/pages/default.yml) to familiarize yourself with how to use it.
+The button you create with the `field: janitor` in your blueprint can be configured to do various things. Checkout the [example default.yml blueprint](https://github.com/bnomei/kirby-janitor/blob/master/tests/site/blueprints/pages/default.yml) to familiarize yourself with how to use it.
 
 - `autosave`, if `true` then save before pressing the button
 - `backgroundColor`, sets backgroundColor of button
@@ -202,7 +202,7 @@ In either the command or the callback you will be setting/returning data to the 
 
 ### Examples
 
-Again... check out the [built-in commands](https://github.com/bnomei/kirby3-janitor/tree/master/commands) and plugin [example commands](https://github.com/bnomei/kirby3-janitor/tree/master/tests/site/commands) to learn how to use the field and api options yourself.
+Again... check out the [built-in commands](https://github.com/bnomei/kirby-janitor/tree/master/commands) and plugin [example commands](https://github.com/bnomei/kirby-janitor/tree/master/tests/site/commands) to learn how to use the field and api options yourself.
 
 ```yml
 test_ping:
@@ -386,7 +386,7 @@ wget https://dev.bnomei.com/plugin-janitor/e9fe51f94eadabf54/janitor%3Abackupzip
 curl -s https://dev.bnomei.com/plugin-janitor/e9fe51f94eadabf54/janitor%3Abackupzip > /dev/null
 ```
 
-Are you having issues with PHP bin and cron? [read this](https://github.com/bnomei/kirby3-janitor/issues/105).
+Are you having issues with PHP bin and cron? [read this](https://github.com/bnomei/kirby-janitor/issues/105).
 
 #### Kirby CLI (installed with composer)
 
@@ -439,7 +439,7 @@ You can use the `kirby janitor:tinker` command to start a REPL session in the te
 
 ## Disclaimer
 
-This plugin is provided "as is" with no guarantee. Use it at your own risk and always test it yourself before using it in a production environment. If you find any issues, please [create a new issue](https://github.com/bnomei/kirby3-janitor/issues/new).
+This plugin is provided "as is" with no guarantee. Use it at your own risk and always test it yourself before using it in a production environment. If you find any issues, please [create a new issue](https://github.com/bnomei/kirby-janitor/issues/new).
 
 ## License
 
