@@ -325,10 +325,22 @@ export default {
 		},
 
 		async copyToClipboard(content) {
-			try {
+			if (navigator.clipboard && window.isSecureContext) {
 				await navigator.clipboard.writeText(content);
-			} catch (err) {
-				console.error("navigator.clipboard is not available");
+			} else {
+				const textArea = document.createElement("textarea");
+				textArea.value = content;
+				textArea.style.position = "absolute";
+				textArea.style.left = "-999999px";
+				document.body.prepend(textArea);
+				textArea.select();
+				try {
+					document.execCommand("copy");
+				} catch (error) {
+					console.error(error);
+				} finally {
+					textArea.remove();
+				}
 			}
 		}
 	}
