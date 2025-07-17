@@ -240,21 +240,21 @@ final class Janitor
             $model = Janitor::resolveModel($model);
         }
 
-        if (! $modelKey && ! $model && $path = get('path')) {
+        if ($modelKey === false && ! $model && $path = get('path')) {
             // infer model (page or page draft) from current panel path
             if (Str::contains($path, 'panel/site')) {
                 $model = kirby()->site();
-            } elseif (Str::contains($path, 'panel/pages')) {
+            } elseif (Str::contains($path, 'panel/pages') && array_search('--page', $args) === false) {
                 $id = trim(str_replace(['panel/pages', '+'], ['', '/'], $path), '/');
                 $model = kirby()->page($id);
                 $args[] = '--page';
                 $args[] = $model->uuid()?->toString() ?? $model->id();
-            } elseif (Str::contains($path, 'panel/users')) {
+            } elseif (Str::contains($path, 'panel/users') && array_search('--user', $args) === false) {
                 $id = trim(str_replace(['panel/users', '+'], ['', '/'], $path), '/');
                 $model = kirby()->user($id);
                 $args[] = '--user';
                 $args[] = $model->uuid()?->toString() ?? $model->id();
-            } elseif (Str::contains($path, 'panel/account')) {
+            } elseif (Str::contains($path, 'panel/account') && array_search('--user', $args) === false) {
                 // $id = trim(str_replace(['panel/account', '+'], ['', '/'], $path), '/');
                 $model = kirby()->user();
                 $args[] = '--user';
