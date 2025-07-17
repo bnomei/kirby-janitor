@@ -240,6 +240,12 @@ final class Janitor
             $model = Janitor::resolveModel($model);
         }
 
+        if (! $model && $path = get('path')) {
+            // infer model (page or page draft) from current panel path
+            $id = trim(str_replace(['panel/pages', '+'], ['', '/'], $path), '/');
+            $model = kirby()->page($id);
+        }
+
         $args = array_map(function ($value) use ($model) {
             // allows for html even without {< since it is not a blueprint query
             // but just a string inside the command

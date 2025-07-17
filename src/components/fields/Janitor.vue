@@ -169,7 +169,10 @@ export default {
 				return;
 			}
 
-			await this.postRequest("plugin-janitor", { command: this.command });
+			await this.postRequest("plugin-janitor", {
+				command: this.command,
+				path: window.location.pathname
+			});
 		},
 
 		async postRequest(path, data) {
@@ -301,7 +304,6 @@ export default {
 					this.copyToClipboard(this.clipboardRequest);
 				});
 			} else {
-				console.log(this.cooldown);
 				setTimeout(this.resetButton, this.cooldown || 2000);
 			}
 		},
