@@ -3,15 +3,12 @@ preset: page
 
 buttons:
   janitor:
-    command: whistle
-    label: Whistle
-    icon: audio
-  janitor_2:
-    command: ping
-    label: Ping
-    progress: ....
-    success: Pong
-    error: BAMM
+    component: k-janitor-view-button
+    props:
+      command: whistle
+      label: Whistle
+      icon: audio
+  open: true
   preview: true
   settings: true
 

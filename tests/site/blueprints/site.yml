@@ -1,3 +1,13 @@
+buttons:
+  janitor:
+    type: janitor
+    command: 'notify'
+    label: Panel notification (success/error)
+    icon: bell
+  open: true
+  preview: true
+  languages: true
+
 sections:
   pages:
     type: pages

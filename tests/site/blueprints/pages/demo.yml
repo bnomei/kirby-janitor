@@ -1,0 +1,37 @@
+title: Demo
+
+buttons:
+  janitor:
+    type: janitor
+    command: 'notify'
+    label: Show UUID as notification
+    icon: bell
+  open: true
+  preview: true
+  settings: true
+
+fields:
+
+  info:
+    type: info
+    text: "Janitor has many of options and built in commands.<br>It can be used to create **view buttons** and like a **field**."
+
+  janitor_color:
+    label: Define custom initial and status colors
+    type: janitor
+    command: 'janitor:job --key random.colors'
+    icon: wand
+    color: 'var(--color-purple-800)'
+    backgroundColor: 'var(--color-purple-400)'
+
+  janitor_run:
+    type: janitor
+    command: 'janitor:out --msg "Email was sent to <{{ user.name }}>. '
+    label: 'Run any PHP code, like clearing the "Pages Cache" or "Send email"'
+    icon: email
+
+  janitor_open:
+    type: janitor
+    command: 'janitor:open --data {{ user.panel.url }}'
+    label: Goto current user in Panel
+    icon: user

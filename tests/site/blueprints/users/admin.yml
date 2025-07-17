@@ -1,3 +1,22 @@
+buttons:
+  janitor:
+    component: k-janitor-view-button
+    props:
+      type: janitor
+      command: 'notify'
+      label: Show UUID as notification
+      icon: bell
+  janitor_2:
+    component: k-janitor-view-button
+    props:
+      command: ping
+      label: Ping
+      progress: ...
+      success: Pong
+      error: BAMM
+      icon: circle
+  settings: true
+
 fields:
   test_uuid:
     type: janitor

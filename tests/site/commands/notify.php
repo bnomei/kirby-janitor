@@ -11,7 +11,7 @@ return [
             'status' => 200,
             'notification' => [
                 rand(0, 1) ? 'success' : 'error',
-                page($cli->arg('page'))->uuid()->toString(),
+                $cli->arg('model'),
             ],
         ]);
     },

@@ -240,10 +240,29 @@ final class Janitor
             $model = Janitor::resolveModel($model);
         }
 
-        if (! $model && $path = get('path')) {
+        if (! $modelKey && ! $model && $path = get('path')) {
             // infer model (page or page draft) from current panel path
-            $id = trim(str_replace(['panel/pages', '+'], ['', '/'], $path), '/');
-            $model = kirby()->page($id);
+            if (Str::contains($path, 'panel/site')) {
+                $model = kirby()->site();
+            } elseif (Str::contains($path, 'panel/pages')) {
+                $id = trim(str_replace(['panel/pages', '+'], ['', '/'], $path), '/');
+                $model = kirby()->page($id);
+                $args[] = '--page';
+                $args[] = $model->uuid()?->toString() ?? $model->id();
+            } elseif (Str::contains($path, 'panel/users')) {
+                $id = trim(str_replace(['panel/users', '+'], ['', '/'], $path), '/');
+                $model = kirby()->user($id);
+                $args[] = '--user';
+                $args[] = $model->uuid()?->toString() ?? $model->id();
+            } elseif (Str::contains($path, 'panel/account')) {
+                // $id = trim(str_replace(['panel/account', '+'], ['', '/'], $path), '/');
+                $model = kirby()->user();
+                $args[] = '--user';
+                $args[] = $model->uuid()?->toString() ?? $model->id();
+            }
+
+            $args[] = '--model';
+            $args[] = $model->uuid()?->toString() ?? $model->id();
         }
 
         $args = array_map(function ($value) use ($model) {
