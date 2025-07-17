@@ -92,6 +92,7 @@ buttons:
       command: whistle
       label: Whistle
       icon: audio
+  open: true
   preview: true
   settings: true
 ```
