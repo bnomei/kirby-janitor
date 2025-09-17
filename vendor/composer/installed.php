@@ -1,8 +1,8 @@
 <?php return array(
     'root' => array(
         'name' => 'bnomei/kirby-janitor',
-        'pretty_version' => '5.4.2',
-        'version' => '5.4.2.0',
+        'pretty_version' => '5.4.3',
+        'version' => '5.4.3.0',
         'reference' => null,
         'type' => 'kirby-plugin',
         'install_path' => __DIR__ . '/../../',
@@ -11,8 +11,8 @@
     ),
     'versions' => array(
         'bnomei/kirby-janitor' => array(
-            'pretty_version' => '5.4.2',
-            'version' => '5.4.2.0',
+            'pretty_version' => '5.4.3',
+            'version' => '5.4.3.0',
             'reference' => null,
             'type' => 'kirby-plugin',
             'install_path' => __DIR__ . '/../../',
@@ -38,9 +38,9 @@
             'dev_requirement' => false,
         ),
         'symfony/finder' => array(
-            'pretty_version' => 'v7.3.0',
-            'version' => '7.3.0.0',
-            'reference' => 'ec2344cf77a48253bbca6939aa3d2477773ea63d',
+            'pretty_version' => 'v7.3.2',
+            'version' => '7.3.2.0',
+            'reference' => '2a6614966ba1074fa93dae0bc804227422df4dfe',
             'type' => 'library',
             'install_path' => __DIR__ . '/../symfony/finder',
             'aliases' => array(),
