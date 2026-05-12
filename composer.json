@@ -1,7 +1,6 @@
 {
     "name": "bnomei/kirby-janitor",
     "type": "kirby-plugin",
-    "version": "5.4.3",
     "license": "MIT",
     "homepage": "https://github.com/bnomei/kirby-janitor",
     "description": "Kirby Plugin for running commands like cleaning the cache from within the Panel, PHP code or a cronjob",
@@ -36,31 +35,33 @@
         }
     },
     "config": {
-        "optimize-autoloader": true,
-        "sort-packages": true,
         "allow-plugins": {
             "getkirby/composer-installer": true,
             "pestphp/pest-plugin": true
-        }
+        },
+        "optimize-autoloader": true,
+        "platform": {
+            "php": "8.2.0"
+        },
+        "sort-packages": true
     },
     "require": {
-        "php": ">=8.2",
-        "getkirby/composer-installer": "^1.2",
-        "symfony/deprecation-contracts": "^3.0.1",
+        "php": "^8.2",
+        "getkirby/composer-installer": "^1.2.1",
         "symfony/finder": "^7.0"
     },
     "require-dev": {
-        "getkirby/cli": "^1.5.0",
-        "getkirby/cms": "5.0.0",
-        "larastan/larastan": "^v3.0.0",
+        "getkirby/cli": "^1.9",
+        "getkirby/cms": "^5.4",
+        "larastan/larastan": "^3.0",
         "laravel/pint": "^1.13",
-        "pestphp/pest": "^v3.5.1",
+        "pestphp/pest": "^3.8.6",
         "spatie/ray": "^1.39"
     },
     "scripts": {
         "stan": "./vendor/bin/phpstan",
         "fix": "./vendor/bin/pint",
-        "test": "./vendor/bin/pest --profile",
+        "test": "./vendor/bin/pest --profile --no-coverage",
         "dist": [
             "npm run format",
             "npm run build",

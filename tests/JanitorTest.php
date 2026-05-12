@@ -5,6 +5,10 @@ declare(strict_types=1);
 require_once __DIR__.'/../vendor/autoload.php';
 
 use Bnomei\Janitor;
+use Kirby\Cms\File;
+use Kirby\Cms\Page;
+use Kirby\Cms\Site;
+use Kirby\Cms\User;
 
 test('singleton', function () {
     // create
@@ -68,18 +72,21 @@ test('method', function () {
 it('can resolve models', function () {
     kirby()->impersonate('kirby');
     $user = kirby()->users()->create([
-        'email' => 'test@bnomei.com',
+        'email' => uniqid('test-', true).'@bnomei.com',
+        'password' => 'password123',
     ]);
     $janitor = new Janitor;
 
-    expect($janitor->model('page://vf0xqIlpU0ZlSorI'))->toBeInstanceOf(Kirby\Cms\Page::class)
-        ->and($janitor->model('site://'))->toBeInstanceOf(Kirby\Cms\Site::class)
-        ->and($janitor->model($user->uuid()->toString()))->toBeInstanceOf(Kirby\Cms\User::class)
-        ->and($janitor->model('file://u8X1ZJkCgi2z1vZT'))->toBeInstanceOf(Kirby\Cms\File::class)
+    expect($janitor->model('page://vf0xqIlpU0ZlSorI'))->toBeInstanceOf(Page::class)
+        ->and($janitor->model('site://'))->toBeInstanceOf(Site::class)
+        ->and($janitor->model($user->uuid()->toString()))->toBeInstanceOf(User::class)
+        ->and($janitor->model('file://u8X1ZJkCgi2z1vZT'))->toBeInstanceOf(File::class)
         ->and($janitor->model('home')->slug())->toBe('home')
         ->and($janitor->model('rubbish'))->toBeNull();
 
-    $user->delete();
+    if (kirby()->users()->count() > 1) {
+        $user->delete();
+    }
 });
 
 it('can check variables to be like `true`', function () {
@@ -103,7 +110,8 @@ it('can parse a query', function () {
     $home = page('home');
     kirby()->impersonate('kirby');
     $user = kirby()->users()->create([
-        'email' => 'test@bnomei.com',
+        'email' => uniqid('test-', true).'@bnomei.com',
+        'password' => 'password123',
     ]);
 
     expect(Janitor::query('Hello {{ kirby.version }}'))->toEqual('Hello '.kirby()->version())
@@ -113,7 +121,9 @@ it('can parse a query', function () {
         ->and(Janitor::query('Email {{ user.email }}', $user))->toEqual('Email '.$user->email())
         ->and(Janitor::query('File {{ file.filename }}', $home->files()->first()))->toEqual('File '.$home->files()->first()->filename());
 
-    $user->delete();
+    if (kirby()->users()->count() > 1) {
+        $user->delete();
+    }
 });
 
 it('resolve queries in commands with a model', function () {

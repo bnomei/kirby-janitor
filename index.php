@@ -284,7 +284,7 @@ if (! function_exists('undertaker')) {
     {
         return janitor()->command(implode(' ', [
             'janitor:undertaker',
-            '--page '.($page->uuid()?->toString() ?? $page->id()),
+            '--page '.$page->uuid()->toString(),
             '--user '.kirby()->user()?->id(),
             '--quiet',
         ]));

@@ -7,8 +7,8 @@ namespace Bnomei;
 use Kirby\CLI\CLI;
 use Kirby\Cms\File;
 use Kirby\Cms\Page;
+use Kirby\Cms\Site;
 use Kirby\Cms\User;
-use Kirby\Panel\Site;
 use Kirby\Toolkit\A;
 use Kirby\Toolkit\Str;
 
@@ -115,6 +115,20 @@ final class Janitor
         return Janitor::resolveModel($uuid);
     }
 
+    private static function modelIdentifier(Page|File|User|Site $model): string
+    {
+        $uuid = $model->uuid()->toString();
+        if ($uuid !== '') {
+            return $uuid;
+        }
+
+        if ($model instanceof Site) {
+            return 'site://';
+        }
+
+        return $model->id();
+    }
+
     private static ?self $singleton;
 
     public static function singleton(array $options = []): Janitor
@@ -174,7 +188,7 @@ final class Janitor
             $page = $model;
         } elseif ($model instanceof File) {
             $file = $model;
-        } elseif ($model instanceof Site || $model === $site) {
+        } elseif ($model instanceof Site) {
             $site = $model;
         } elseif ($model instanceof User) {
             $user = $model;
@@ -232,42 +246,58 @@ final class Janitor
         return null;
     }
 
+    /**
+     * @param  list<string>  $args
+     * @return list<string>
+     */
     public static function resolveQueriesInCommand(array $args): array
     {
         $model = null;
         $modelKey = array_search('--model', $args);
 
-        if ($modelKey !== false && is_int($modelKey)) {
-            $model = $modelKey + 1 < count($args) ? $args[$modelKey + 1] : null;
-            if (! $model) {
+        if ($modelKey !== false) {
+            $modelId = $modelKey + 1 < count($args) ? $args[$modelKey + 1] : null;
+            if (! is_string($modelId) || $modelId === '') {
                 return $args; // @codeCoverageIgnore
             }
-            $model = Janitor::resolveModel($model);
+            $model = Janitor::resolveModel($modelId);
         }
 
-        if ($modelKey === false && ! $model && $path = get('path')) {
+        $path = get('path');
+        if ($modelKey === false && ! $model && is_string($path)) {
             // infer model (page or page draft) from current panel path
             if (Str::contains($path, 'panel/site')) {
                 $model = kirby()->site();
             } elseif (Str::contains($path, 'panel/pages') && array_search('--page', $args) === false) {
                 $id = trim(str_replace(['panel/pages', '+'], ['', '/'], $path), '/');
-                $model = kirby()->page($id);
-                $args[] = '--page';
-                $args[] = $model->uuid()?->toString() ?? $model->id();
+                $page = kirby()->page($id);
+                if ($page instanceof Page) {
+                    $model = $page;
+                    $args[] = '--page';
+                    $args[] = Janitor::modelIdentifier($page);
+                }
             } elseif (Str::contains($path, 'panel/users') && array_search('--user', $args) === false) {
                 $id = trim(str_replace(['panel/users', '+'], ['', '/'], $path), '/');
-                $model = kirby()->user($id);
-                $args[] = '--user';
-                $args[] = $model->uuid()?->toString() ?? $model->id();
+                $user = kirby()->user($id);
+                if ($user instanceof User) {
+                    $model = $user;
+                    $args[] = '--user';
+                    $args[] = Janitor::modelIdentifier($user);
+                }
             } elseif (Str::contains($path, 'panel/account') && array_search('--user', $args) === false) {
                 // $id = trim(str_replace(['panel/account', '+'], ['', '/'], $path), '/');
-                $model = kirby()->user();
-                $args[] = '--user';
-                $args[] = $model->uuid()?->toString() ?? $model->id();
+                $user = kirby()->user();
+                if ($user instanceof User) {
+                    $model = $user;
+                    $args[] = '--user';
+                    $args[] = Janitor::modelIdentifier($user);
+                }
             }
 
-            $args[] = '--model';
-            $args[] = $model->uuid()?->toString() ?? $model->id();
+            if ($model instanceof Page || $model instanceof User || $model instanceof Site) {
+                $args[] = '--model';
+                $args[] = Janitor::modelIdentifier($model);
+            }
         }
 
         $args = array_map(function ($value) use ($model) {

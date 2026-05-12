@@ -1,6 +1,8 @@
 <?php
 
-class DefaultPage extends \Kirby\Cms\Page
+use Kirby\Cms\Page;
+
+class DefaultPage extends Page
 {
     public function nullberry(): void
     {
@@ -15,9 +17,11 @@ class DefaultPage extends \Kirby\Cms\Page
 
     public function whoAmI(): array
     {
+        $user = kirby()->user();
+
         return [
             'status' => 200,
-            'message' => 'You are '.kirby()->users()->current()?->id(),
+            'message' => 'You are '.$user?->id(),
         ];
     }
 
