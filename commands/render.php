@@ -136,16 +136,31 @@ class JanitorRenderCommand
         } else { // performance optimized way to get ids for `site.index`
             $finder = new Finder;
             $finder->directories()
-                ->in($cli->kirby()->roots()->content());
+                ->in($cli->kirby()->roots()->content())
+                ->exclude(['_drafts', '_changes']);
             foreach ($finder as $folder) {
                 $id = $folder->getRelativePathname();
-                if (! str_contains($id, '_drafts')) {
+                if ($this->isRenderableContentPath($id)) {
                     $ids[] = ltrim(preg_replace('/\/*\d+_/', '/', $id), '/');
                 }
             }
         }
 
         return $ids;
+    }
+
+    private function isRenderableContentPath(string $path): bool
+    {
+        $ignored = ['_drafts', '_changes'];
+        $segments = explode('/', str_replace('\\', '/', $path));
+
+        foreach ($segments as $segment) {
+            if (in_array($segment, $ignored, true)) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function findUrlOfThumbsInContent(string $content): array
@@ -161,6 +176,10 @@ class JanitorRenderCommand
     private function renderPageContent(string $pageId): string
     {
         $page = page($pageId);
+        if (! $page instanceof Page) {
+            throw new RuntimeException('Page not found');
+        }
+
         if ($this->countLanguages > 1) {
             $content = $page->render();
             foreach (kirby()->languages() as $lang) {

@@ -145,6 +145,36 @@ test('download command does not execute shell payloads from web-style command da
         ->and(file_exists($target))->toBeFalse();
 });
 
+test('render command ignores Kirby changes folders', function () {
+    $changes = kirby()->roots()->content().'/home/_changes';
+    $changeFile = $changes.'/default.en.txt';
+    $createdDirectory = is_dir($changes) === false;
+    $previousContent = is_file($changeFile) ? file_get_contents($changeFile) : null;
+
+    if ($createdDirectory) {
+        mkdir($changes, 0777, true);
+    }
+    file_put_contents($changeFile, 'Title: Unsaved changes');
+
+    try {
+        $result = (new Janitor)->command('janitor:render --quiet');
+    } finally {
+        if ($previousContent !== null) {
+            file_put_contents($changeFile, $previousContent);
+        } elseif (is_file($changeFile)) {
+            unlink($changeFile);
+        }
+
+        if ($createdDirectory && is_dir($changes)) {
+            rmdir($changes);
+        }
+    }
+
+    expect($result['status'])->toBe(200)
+        ->and($result['count'])->toBe(2)
+        ->and($result['renderFailed'])->toBe(0);
+});
+
 test('construct', function () {
     $janitor = new Janitor;
     expect($janitor)->toBeInstanceOf(Janitor::class);

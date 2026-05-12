@@ -3,7 +3,7 @@
         'name' => 'bnomei/kirby-janitor',
         'pretty_version' => 'dev-master',
         'version' => 'dev-master',
-        'reference' => 'aefe99c7b8f64ff4b9c2ed149895a13d01617322',
+        'reference' => 'bd632acbdae83ecb60f06060025d4e2b77b1f16f',
         'type' => 'kirby-plugin',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -13,7 +13,7 @@
         'bnomei/kirby-janitor' => array(
             'pretty_version' => 'dev-master',
             'version' => 'dev-master',
-            'reference' => 'aefe99c7b8f64ff4b9c2ed149895a13d01617322',
+            'reference' => 'bd632acbdae83ecb60f06060025d4e2b77b1f16f',
             'type' => 'kirby-plugin',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
