@@ -8,6 +8,7 @@ if (! class_exists('Bnomei\Janitor')) {
 
 use Bnomei\Janitor;
 use Kirby\CLI\CLI;
+use Kirby\Cms\User;
 use Kirby\Filesystem\Dir;
 
 return [
@@ -21,7 +22,7 @@ return [
             Dir::make($dir);
         }
 
-        /** @var \Kirby\Cms\User $user */
+        /** @var User $user */
         $user = $cli->kirby()->user($cli->arg('user'));
 
         $filename = implode('-', [

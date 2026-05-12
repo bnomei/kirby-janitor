@@ -131,7 +131,7 @@ final class Janitor
     }
 
     /**
-     * @param array<mixed, mixed> $permissions
+     * @param  array<mixed, mixed>  $permissions
      */
     public static function commandAllowedByPermissions(string $command, array $permissions): bool
     {
@@ -315,6 +315,7 @@ final class Janitor
         foreach ($rules as $key => $value) {
             if (is_int($key) && is_string($value)) {
                 $commands[] = $value;
+
                 continue;
             }
 
@@ -359,6 +360,7 @@ final class Janitor
 
             if (is_array($value)) {
                 $flat = array_merge($flat, self::flattenCommandPermissions($value, $path));
+
                 continue;
             }
 

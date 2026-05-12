@@ -7,6 +7,7 @@ if (! class_exists('Bnomei\Janitor')) {
 }
 
 use Bnomei\Janitor;
+use Bnomei\Lapse;
 use Kirby\CLI\CLI;
 use Kirby\Cms\Page;
 use Kirby\Cms\Pages;
@@ -36,7 +37,7 @@ class JanitorRenderCommand
         // make sure the thumbs are triggered
         $kirby->cache('pages')->flush();
         if (class_exists('\Bnomei\Lapse')) {
-            \Bnomei\Lapse::singleton()->flush();
+            Lapse::singleton()->flush();
         }
 
         // visit all pages to generate media/*.job files

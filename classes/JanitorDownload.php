@@ -28,7 +28,7 @@ final class JanitorDownload
     }
 
     /**
-     * @param array<int, string> $arguments
+     * @param  array<int, string>  $arguments
      */
     public static function run(array $arguments): int
     {

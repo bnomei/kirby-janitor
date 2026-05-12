@@ -1,5 +1,8 @@
 <?php
 
+use Kirby\Cms\Page;
+use Kirby\Http\Header;
+
 return [
     'debug' => true,
     'languages' => true,
@@ -44,7 +47,7 @@ return [
     //    },
 
     'hooks' => [
-        'page.delete:before' => function (Kirby\Cms\Page $page, bool $force) {
+        'page.delete:before' => function (Page $page, bool $force) {
             // do something before a page gets deleted
             undertaker($page);
         },
@@ -55,7 +58,7 @@ return [
             'pattern' => 'webhook/(:any)/(:any)',
             'action' => function ($secret, $command) {
                 if ($secret != janitor()->option('secret')) {
-                    \Kirby\Http\Header::status(401);
+                    Header::status(401);
                     exit();
                 }
 
@@ -63,7 +66,7 @@ return [
                     janitor()->command('janitor:backupzip --quiet');
                     $backup = janitor()->data('janitor:backupzip')['path'];
                     if (F::exists($backup)) {
-                        \Kirby\Http\Header::download([
+                        Header::download([
                             'mime' => F::mime($backup),
                             'name' => F::filename($backup),
                         ]);

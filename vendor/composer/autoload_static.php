@@ -6,35 +6,31 @@ namespace Composer\Autoload;
 
 class ComposerStaticInitdf1988dca7649aad51abbfad997bdd88
 {
-    public static $files = array (
-        '6e3fae29631ef280660b3cdad06f25a8' => __DIR__ . '/..' . '/symfony/deprecation-contracts/function.php',
-    );
-
     public static $prefixLengthsPsr4 = array (
-        'S' => 
+        'S' =>
         array (
             'Symfony\\Component\\Finder\\' => 25,
         ),
-        'K' => 
+        'K' =>
         array (
             'Kirby\\' => 6,
         ),
-        'B' => 
+        'B' =>
         array (
             'Bnomei\\' => 7,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
-        'Symfony\\Component\\Finder\\' => 
+        'Symfony\\Component\\Finder\\' =>
         array (
             0 => __DIR__ . '/..' . '/symfony/finder',
         ),
-        'Kirby\\' => 
+        'Kirby\\' =>
         array (
             0 => __DIR__ . '/..' . '/getkirby/composer-installer/src',
         ),
-        'Bnomei\\' => 
+        'Bnomei\\' =>
         array (
             0 => __DIR__ . '/../..' . '/classes',
         ),
@@ -42,6 +38,7 @@ class ComposerStaticInitdf1988dca7649aad51abbfad997bdd88
 
     public static $classMap = array (
         'Bnomei\\Janitor' => __DIR__ . '/../..' . '/classes/Janitor.php',
+        'Bnomei\\JanitorDownload' => __DIR__ . '/../..' . '/classes/JanitorDownload.php',
         'Composer\\InstalledVersions' => __DIR__ . '/..' . '/composer/InstalledVersions.php',
         'Kirby\\ComposerInstaller\\CmsInstaller' => __DIR__ . '/..' . '/getkirby/composer-installer/src/ComposerInstaller/CmsInstaller.php',
         'Kirby\\ComposerInstaller\\Installer' => __DIR__ . '/..' . '/getkirby/composer-installer/src/ComposerInstaller/Installer.php',
