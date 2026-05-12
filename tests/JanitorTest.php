@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__.'/../vendor/autoload.php';
 
 use Bnomei\Janitor;
+use Bnomei\JanitorDownload;
 use Kirby\Cms\File;
 use Kirby\Cms\Page;
 use Kirby\Cms\Site;
@@ -118,6 +119,30 @@ test('public command dispatch requires an explicit allow list', function () {
         ->and((new Janitor([
             'public.commands' => ['janitor:thumbs'],
         ]))->canDispatchCommand('janitor:backupzip --quiet', 'public'))->toBeFalse();
+});
+
+test('download command builds wget argv without shell expansion', function () {
+    $target = sys_get_temp_dir().'/janitor-download-'.uniqid('', true);
+
+    expect(JanitorDownload::wgetArguments(
+        'https://example.com/file.zip;touch'.$target,
+        $target.'; touch '.$target.'.pwned'
+    ))->toBe([
+        'wget',
+        '-O',
+        $target.'; touch '.$target.'.pwned',
+        'https://example.com/file.zip;touch'.$target,
+    ])
+        ->and(JanitorDownload::wgetArguments('ftp://example.com/file.zip'))->toBeNull()
+        ->and(JanitorDownload::wgetArguments('https://example.com/file.zip; touch '.$target))->toBeNull();
+});
+
+test('download command does not execute shell payloads from web-style command data', function () {
+    $target = sys_get_temp_dir().'/janitor-download-'.uniqid('', true);
+    $result = (new Janitor)->command('janitor:download --data "https://example.com/file.zip; touch '.$target.'" --output "'.$target.'" --quiet');
+
+    expect($result['download'])->toBe('https://example.com/file.zip; touch '.$target)
+        ->and(file_exists($target))->toBeFalse();
 });
 
 test('construct', function () {

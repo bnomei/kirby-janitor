@@ -141,7 +141,7 @@ This plugin comes with a [few commands](https://github.com/bnomei/kirby-janitor/
 - `janitor:call`, calls a method on the current model with optional data parameter
 - `janitor:cleancontent`, removes fields from content file that are not defined in your blueprints
 - `janitor:clipboard`, copies a defined value to your clipboard
-- `janitor:download`, triggers a download of an URL
+- `janitor:download`, triggers a browser download of an URL in the Panel; in CLI it downloads valid http(s) URLs via `wget`
 - `janitor:flush`, flush a cache by providing its name (default: pages cache)
 - `janitor:job`, run a callback
 - `janitor:maintenance`, toggle maintenance mode
@@ -271,7 +271,7 @@ janitor_download:
   command: 'janitor:download --data {{ site.index.files.first.url }}'
   label: Download File Example
   icon: download
-  # the download command will forward the `data` arg to `download` and start downloading that
+  # the download command will forward the `data` arg to `download` and start downloading that in the browser
 
 janitor_backupzip:
   type: janitor

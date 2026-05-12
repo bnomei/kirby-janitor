@@ -6,11 +6,16 @@ if (! class_exists('Bnomei\Janitor')) {
     require_once __DIR__.'/../classes/Janitor.php';
 }
 
+if (! class_exists('Bnomei\JanitorDownload')) {
+    require_once __DIR__.'/../classes/JanitorDownload.php';
+}
+
 use Bnomei\Janitor;
+use Bnomei\JanitorDownload;
 use Kirby\CLI\CLI;
 
 return [
-    'description' => 'Pipe `data` to `download` arg in Janitor or download on CLI via wget',
+    'description' => 'Pipe `data` to `download` arg in Janitor or download valid http(s) URLs on CLI via wget',
     'args' => [
         'output' => [
             'prefix' => 'o',
@@ -23,12 +28,12 @@ return [
     'command' => static function (CLI $cli): void {
         $cli->success('download => '.$cli->arg('data'));
 
-        if (defined('STDOUT')) {
-            $command = 'wget';
-            if (! empty($cli->arg('output'))) {
-                $command .= ' -O '.$cli->arg('output');
+        if (php_sapi_name() === 'cli') {
+            $arguments = JanitorDownload::wgetArguments($cli->arg('data'), $cli->arg('output'));
+
+            if ($arguments !== null) {
+                JanitorDownload::run($arguments);
             }
-            exec($command.' '.$cli->arg('data'));
         }
 
         janitor()->data($cli->arg('command'), [
