@@ -51,6 +51,8 @@ final class Janitor
         ],
     ];
 
+    public const PERMISSION_CATEGORY = 'bnomei.janitor';
+
     private static array $data = [];
 
     public function data(string $command, ?array $data = null): ?array
@@ -69,6 +71,9 @@ final class Janitor
         $defaults = [
             'debug' => option('debug'),
             'secret' => option('bnomei.janitor.secret'),
+            'commands.allow' => option('bnomei.janitor.commands.allow', null),
+            'commands.deny' => option('bnomei.janitor.commands.deny', []),
+            'public.commands' => option('bnomei.janitor.public.commands', []),
         ];
         $this->options = array_merge($defaults, $options);
 
@@ -91,6 +96,117 @@ final class Janitor
     public static function matchesSecret(mixed $configured, string $provided): bool
     {
         return is_string($configured) && $configured !== '' && hash_equals($configured, $provided);
+    }
+
+    public static function commandName(string $command): string
+    {
+        [$commandName] = self::parseCommand($command);
+
+        return $commandName;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function commandPermissionCandidates(string $command): array
+    {
+        $command = self::normalizeCommandName($command);
+
+        if ($command === '') {
+            return [];
+        }
+
+        $candidates = ['commands.*'];
+        $parts = explode('.', $command);
+        $prefix = [];
+
+        foreach (array_slice($parts, 0, -1) as $part) {
+            $prefix[] = $part;
+            $candidates[] = 'commands.'.implode('.', $prefix).'.*';
+        }
+
+        $candidates[] = 'commands.'.$command;
+
+        return array_values(array_unique($candidates));
+    }
+
+    /**
+     * @param array<mixed, mixed> $permissions
+     */
+    public static function commandAllowedByPermissions(string $command, array $permissions): bool
+    {
+        $allowed = true;
+        $permissions = self::flattenCommandPermissions($permissions);
+
+        foreach (self::commandPermissionCandidates($command) as $candidate) {
+            if (array_key_exists($candidate, $permissions)) {
+                $allowed = $permissions[$candidate] === true;
+            }
+        }
+
+        return $allowed;
+    }
+
+    public static function commandMatches(string $command, mixed $rules): bool
+    {
+        $command = self::normalizeCommandName($command);
+
+        if ($command === '') {
+            return false;
+        }
+
+        foreach (self::commandRules($rules) as $rule) {
+            $rule = self::normalizeCommandRule($rule);
+
+            if ($rule === '') {
+                continue;
+            }
+
+            $pattern = '/^'.str_replace('\*', '.*', preg_quote($rule, '/')).'$/';
+
+            if (preg_match($pattern, $command) === 1) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function canDispatchCommand(string $command, string $origin = 'panel'): bool
+    {
+        $commandName = self::commandName($command);
+
+        if ($commandName === '') {
+            return false;
+        }
+
+        if (self::commandMatches($commandName, $this->option('commands.deny')) === true) {
+            return false;
+        }
+
+        $allow = $this->option('commands.allow');
+
+        if ($allow !== null && self::commandMatches($commandName, $allow) === false) {
+            return false;
+        }
+
+        if ($origin === 'public' && self::commandMatches($commandName, $this->option('public.commands')) === false) {
+            return false;
+        }
+
+        if ($origin === 'panel') {
+            $user = kirby()->user();
+
+            if ($user instanceof User) {
+                $permissions = $user->role()->permissions()->toArray()[self::PERMISSION_CATEGORY] ?? [];
+
+                if (is_array($permissions) && self::commandAllowedByPermissions($commandName, $permissions) === false) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
 
     public function command(string $command): array
@@ -171,6 +287,85 @@ final class Janitor
         }
 
         return [$name, $args];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private static function commandRules(mixed $rules): array
+    {
+        if ($rules === true) {
+            return ['*'];
+        }
+
+        if ($rules === false || $rules === null) {
+            return [];
+        }
+
+        if (is_string($rules)) {
+            return [$rules];
+        }
+
+        if (! is_array($rules)) {
+            return [];
+        }
+
+        $commands = [];
+
+        foreach ($rules as $key => $value) {
+            if (is_int($key) && is_string($value)) {
+                $commands[] = $value;
+                continue;
+            }
+
+            if (is_string($key) && $value === true) {
+                $commands[] = $key;
+            }
+        }
+
+        return $commands;
+    }
+
+    private static function normalizeCommandName(string $command): string
+    {
+        return self::normalizeCommandRule(self::commandName($command));
+    }
+
+    private static function normalizeCommandRule(string $command): string
+    {
+        $command = strtolower(trim($command));
+
+        if (str_starts_with($command, 'commands.')) {
+            $command = substr($command, 9);
+        }
+
+        return trim(str_replace([':', '/', '\\'], '.', $command), '.');
+    }
+
+    /**
+     * @param  array<mixed, mixed>  $permissions
+     * @return array<string, mixed>
+     */
+    private static function flattenCommandPermissions(array $permissions, string $prefix = ''): array
+    {
+        $flat = [];
+
+        foreach ($permissions as $key => $value) {
+            if (! is_string($key)) {
+                continue;
+            }
+
+            $path = $prefix === '' ? $key : $prefix.'.'.$key;
+
+            if (is_array($value)) {
+                $flat = array_merge($flat, self::flattenCommandPermissions($value, $path));
+                continue;
+            }
+
+            $flat[$path] = $value;
+        }
+
+        return $flat;
     }
 
     public static function query(mixed $template = null, mixed $model = null): string

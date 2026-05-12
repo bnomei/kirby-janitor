@@ -18,6 +18,10 @@ return [
     ],
 
     'bnomei.janitor.secret' => 'e9fe51f94eadabf54',
+    'bnomei.janitor.public.commands' => [
+        'janitor:backupzip',
+        'janitor:thumbs',
+    ],
 
     // janitor v2 job callback
     'some.key.to.task' => function ($model, $data = null) {

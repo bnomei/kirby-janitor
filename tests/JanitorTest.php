@@ -46,6 +46,80 @@ test('public route secrets require strict non-empty string matches', function ()
         }, 'secret'))->toBeFalse();
 });
 
+test('command names are normalized for permission checks', function () {
+    expect(Janitor::commandName('janitor:download --data "https://example.com/file.zip" --quiet'))->toBe('janitor:download')
+        ->and(Janitor::commandPermissionCandidates('janitor:download --data "https://example.com/file.zip"'))->toBe([
+            'commands.*',
+            'commands.janitor.*',
+            'commands.janitor.download',
+        ])
+        ->and(Janitor::commandPermissionCandidates('custom:cache:flush'))->toBe([
+            'commands.*',
+            'commands.custom.*',
+            'commands.custom.cache.*',
+            'commands.custom.cache.flush',
+        ]);
+});
+
+test('command permissions support wildcards and specific overrides', function () {
+    expect(Janitor::commandAllowedByPermissions('janitor:download', [
+        'commands.*' => true,
+        'commands.janitor.download' => false,
+    ]))->toBeFalse()
+        ->and(Janitor::commandAllowedByPermissions('janitor:pipe', [
+            'commands.*' => true,
+            'commands.janitor.download' => false,
+        ]))->toBeTrue()
+        ->and(Janitor::commandAllowedByPermissions('janitor:download', [
+            'commands.*' => false,
+            'commands.janitor.*' => false,
+            'commands.janitor.download' => true,
+        ]))->toBeTrue()
+        ->and(Janitor::commandAllowedByPermissions('janitor:download', [
+            'commands' => [
+                '*' => true,
+                'janitor' => [
+                    'download' => false,
+                ],
+            ],
+        ]))->toBeFalse();
+});
+
+test('command allow and deny lists restrict dispatch by command name', function () {
+    expect((new Janitor([
+        'commands.allow' => null,
+        'commands.deny' => ['janitor:download'],
+    ]))->canDispatchCommand('janitor:download --data "https://example.com/file.zip"'))->toBeFalse()
+        ->and((new Janitor([
+            'commands.allow' => null,
+            'commands.deny' => ['janitor:download'],
+        ]))->canDispatchCommand('janitor:pipe --data hello'))->toBeTrue()
+        ->and((new Janitor([
+            'commands.allow' => [],
+            'commands.deny' => [],
+        ]))->canDispatchCommand('janitor:pipe --data hello'))->toBeFalse()
+        ->and((new Janitor([
+            'commands.allow' => ['janitor:*'],
+            'commands.deny' => [],
+        ]))->canDispatchCommand('janitor:pipe --data hello'))->toBeTrue()
+        ->and((new Janitor([
+            'commands.allow' => ['janitor:*'],
+            'commands.deny' => [],
+        ]))->canDispatchCommand('notify --data hello'))->toBeFalse();
+});
+
+test('public command dispatch requires an explicit allow list', function () {
+    expect((new Janitor([
+        'public.commands' => [],
+    ]))->canDispatchCommand('janitor:thumbs --quiet', 'public'))->toBeFalse()
+        ->and((new Janitor([
+            'public.commands' => ['janitor:thumbs'],
+        ]))->canDispatchCommand('janitor:thumbs --quiet', 'public'))->toBeTrue()
+        ->and((new Janitor([
+            'public.commands' => ['janitor:thumbs'],
+        ]))->canDispatchCommand('janitor:backupzip --quiet', 'public'))->toBeFalse();
+});
+
 test('construct', function () {
     $janitor = new Janitor;
     expect($janitor)->toBeInstanceOf(Janitor::class);

@@ -24,6 +24,12 @@ Kirby::plugin('bnomei/janitor', [
     'options' => [
         'label.cooldown' => 2000, // ms
         'secret' => null,
+        'commands.allow' => null,
+        'commands.deny' => [],
+        'public.commands' => [],
+    ],
+    'permissions' => [
+        'commands.*' => true,
     ],
     'commands' => [ // https://github.com/getkirby/cli
         'janitor:backupzip' => require __DIR__.'/commands/backupzip.php',
@@ -160,13 +166,23 @@ Kirby::plugin('bnomei/janitor', [
             [
                 'pattern' => 'plugin-janitor/(:all)', // using (:all) fixes issues with kirbys routing for : and /
                 'action' => function (string $command) {
-                    return Janitor::singleton()->command(urldecode($command));
+                    $janitor = Janitor::singleton();
+                    $command = urldecode($command);
+
+                    if ($janitor->canDispatchCommand($command) === false) {
+                        return [
+                            'status' => 403,
+                        ];
+                    }
+
+                    return $janitor->command($command);
                 },
             ],
             [
                 'pattern' => 'plugin-janitor',
                 'method' => 'POST',
                 'action' => function () {
+                    $janitor = Janitor::singleton();
                     $command = get('command');
                     if (! is_string($command)) {
                         return [
@@ -175,7 +191,13 @@ Kirby::plugin('bnomei/janitor', [
                         ];
                     }
 
-                    return Janitor::singleton()->command($command);
+                    if ($janitor->canDispatchCommand($command) === false) {
+                        return [
+                            'status' => 403,
+                        ];
+                    }
+
+                    return $janitor->command($command);
                 },
             ],
             [
@@ -197,6 +219,13 @@ Kirby::plugin('bnomei/janitor', [
                 $janitor = Janitor::singleton();
                 if (Janitor::matchesSecret($janitor->option('secret'), $secret)) {
                     $command = urldecode($command);
+
+                    if ($janitor->canDispatchCommand($command, 'public') === false) {
+                        return [
+                            'status' => 403,
+                        ];
+                    }
+
                     if (! Str::contains($command, ' --quiet')) {
                         $command .= ' --quiet';
                     }
@@ -220,6 +249,12 @@ Kirby::plugin('bnomei/janitor', [
                         return [
                             'status' => 200,
                             'info' => 'no command given',
+                        ];
+                    }
+
+                    if ($janitor->canDispatchCommand($command, 'public') === false) {
+                        return [
+                            'status' => 403,
                         ];
                     }
 
