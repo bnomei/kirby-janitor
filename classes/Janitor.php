@@ -88,6 +88,11 @@ final class Janitor
         return $this->options;
     }
 
+    public static function matchesSecret(mixed $configured, string $provided): bool
+    {
+        return is_string($configured) && $configured !== '' && hash_equals($configured, $provided);
+    }
+
     public function command(string $command): array
     {
         if (php_sapi_name() !== 'cli' && ! Str::contains($command, ' --quiet')) {

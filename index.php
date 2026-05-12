@@ -195,7 +195,7 @@ Kirby::plugin('bnomei/janitor', [
             'pattern' => 'plugin-janitor/(:any)/(:all)', // using (:all) fixes issues with kirbys routing for : and /
             'action' => function (string $secret, string $command) {
                 $janitor = Janitor::singleton();
-                if ($secret == $janitor->option('secret')) {
+                if (Janitor::matchesSecret($janitor->option('secret'), $secret)) {
                     $command = urldecode($command);
                     if (! Str::contains($command, ' --quiet')) {
                         $command .= ' --quiet';
@@ -214,7 +214,7 @@ Kirby::plugin('bnomei/janitor', [
             'method' => 'POST',
             'action' => function (string $secret) {
                 $janitor = Janitor::singleton();
-                if ($secret == $janitor->option('secret')) {
+                if (Janitor::matchesSecret($janitor->option('secret'), $secret)) {
                     $command = get('command');
                     if (! is_string($command)) {
                         return [

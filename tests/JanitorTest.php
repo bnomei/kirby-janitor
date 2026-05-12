@@ -30,6 +30,18 @@ test('option', function () {
     expect($janitor->option())->toBeArray();
 });
 
+test('public route secrets require strict non-empty string matches', function () {
+    expect(Janitor::matchesSecret('secret', 'secret'))->toBeTrue()
+        ->and(Janitor::matchesSecret('secret', 'other'))->toBeFalse()
+        ->and(Janitor::matchesSecret('0e12345', '0e99999'))->toBeFalse()
+        ->and(Janitor::matchesSecret(null, ''))->toBeFalse()
+        ->and(Janitor::matchesSecret('', ''))->toBeFalse()
+        ->and(Janitor::matchesSecret(12345, '12345'))->toBeFalse()
+        ->and(Janitor::matchesSecret(function () {
+            return 'secret';
+        }, 'secret'))->toBeFalse();
+});
+
 test('construct', function () {
     $janitor = new Janitor;
     expect($janitor)->toBeInstanceOf(Janitor::class);
