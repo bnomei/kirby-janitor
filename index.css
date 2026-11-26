@@ -1,1 +1,1 @@
-.janitor.is-running{cursor:wait}.janitor[aria-disabled=true]{cursor:not-allowed}.visually-hidden{position:absolute;width:1px;height:1px;border:0;padding:0;margin:0;clip-path:inset(50%);overflow:hidden;white-space:nowrap}
+.janitor.is-running{cursor:wait}.janitor[aria-disabled=true]{cursor:not-allowed}.visually-hidden{clip-path:inset(50%);white-space:nowrap;border:0;width:1px;height:1px;margin:0;padding:0;position:absolute;overflow:hidden}.k-buttons-field .janitor-wrapper{width:100%}

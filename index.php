@@ -1,18 +1,9 @@
 <?php
 
 use Bnomei\Janitor;
-use Kirby\Cms\File;
+use Bnomei\JanitorField;
 use Kirby\Cms\Page;
-use Kirby\Cms\Site;
-use Kirby\Cms\User;
 use Kirby\Content\Field;
-use Kirby\Toolkit\I18n;
-
-@include_once __DIR__.'/vendor/autoload.php';
-
-if (! defined('STDOUT')) {
-    define('STDOUT', fopen('php://stdout', 'wb'));
-}
 
 /*
 janitor [noun]
@@ -27,9 +18,6 @@ Kirby::plugin('bnomei/janitor', [
         'commands.allow' => null,
         'commands.deny' => [],
         'public.commands' => [],
-    ],
-    'permissions' => [
-        'commands.*' => true,
     ],
     'commands' => [ // https://github.com/getkirby/cli
         'janitor:backupzip' => require __DIR__.'/commands/backupzip.php',
@@ -51,107 +39,12 @@ Kirby::plugin('bnomei/janitor', [
         'janitor:undertaker' => require __DIR__.'/commands/undertaker.php',
     ],
     'fields' => [
-        'janitor' => [
-            'props' => [
-                'autosave' => function ($doAutosave = false) {
-                    return Janitor::isTrue($doAutosave);
-                },
-                'backgroundColor' => function ($style = '') {
-                    return Janitor::query($style, $this->model());
-                },
-                'clipboard' => function ($clipboard = null) {
-                    return Janitor::isTrue($clipboard);
-                },
-                'command' => function ($command = '') {
-                    // make lazy by default
-                    $command = str_replace(['{{', '}}'], ['{(', ')}'], $command);
-
-                    // allow non-lazy
-                    $command = str_replace(['{<', '>}'], ['{{', '}}'], $command);
-
-                    // resolve queries
-                    $command = Janitor::query($command, $this->model());
-
-                    // Temporary fix for https://github.com/getkirby/kirby/issues/4955
-                    $uuid = $this->model()->content()->uuid()?->toString();
-
-                    // append model
-                    if ($this->model() instanceof Page) {
-                        $uuid = ! empty($uuid) ? 'page://'.$uuid : null;
-                        $command .= ' --page '.($uuid ?? $this->model()->id());
-                    } elseif ($this->model() instanceof File) {
-                        $uuid = ! empty($uuid) ? 'file://'.$uuid : null;
-                        $command .= ' --file '.($uuid ?? $this->model()->id());
-                    } elseif ($this->model() instanceof User) {
-                        $uuid = ! empty($uuid) ? 'user://'.$uuid : null;
-                        $command .= ' --user '.($uuid ?? $this->model()->id());
-                    } elseif ($this->model() instanceof Site) {
-                        $uuid = null;
-                        $command .= ' --site'; // boolean argument
-                    }
-
-                    $command .= ' --model '.(
-                        $uuid ?? ($this->model() instanceof Site ? 'site://' : $this->model()->id())
-                    );
-
-                    $command .= ' --quiet'; // no STDOUT on frontend PHP
-
-                    return $command;
-                },
-                'confirm' => function ($confirm = '') {
-                    $confirm = I18n::translate($confirm, $confirm, kirby()->user()?->language());
-
-                    return Janitor::query($confirm, $this->model());
-                },
-                'color' => function ($style = '') {
-                    return Janitor::query($style, $this->model());
-                },
-                'cooldown' => function ($cooldownMilliseconds = null) {
-                    return (int) ($cooldownMilliseconds ?? option('bnomei.janitor.label.cooldown'));
-                },
-                'error' => function ($label = null) {
-                    $label = I18n::translate($label, $label, kirby()->user()?->language());
-
-                    return Janitor::query($label, $this->model());
-                },
-                'icon' => function ($icon = null) {
-                    return Janitor::query($icon, $this->model());
-                },
-                'intab' => function ($intab = false) {
-                    return Janitor::isTrue($intab);
-                },
-                'help' => function ($label = null) {
-                    $label = I18n::translate($label, $label, kirby()->user()?->language());
-
-                    return Janitor::query($label, $this->model());
-                },
-                'label' => function ($label = null) {
-                    $label = I18n::translate($label, $label, kirby()->user()?->language());
-
-                    return Janitor::query($label, $this->model());
-                },
-                'headline' => function ($label = null) {
-                    $label = I18n::translate($label, $label, kirby()->user()?->language());
-
-                    return Janitor::query($label, $this->model());
-                },
-                'progress' => function ($label = null) {
-                    $label = I18n::translate($label, $label, kirby()->user()?->language());
-
-                    return Janitor::query($label, $this->model());
-                },
-                'success' => function ($label = null) {
-                    $label = I18n::translate($label, $label, kirby()->user()?->language());
-
-                    return Janitor::query($label, $this->model());
-                },
-                'unsaved' => function ($allowUnsaved = true) {
-                    return Janitor::isTrue($allowUnsaved);
-                },
-            ],
-        ],
+        'janitor' => JanitorField::class,
     ],
     'hooks' => [
+        'system.loadPlugins:after' => function () {
+            Janitor::registerCommandPermissions();
+        },
         // maintenance
         'route:before' => function () {
             if (Janitor::requestBlockedByMaintenance() &&
@@ -197,7 +90,9 @@ Kirby::plugin('bnomei/janitor', [
                         ];
                     }
 
-                    return $janitor->command($command);
+                    $view = get('view');
+
+                    return $janitor->command($command, is_string($view) ? $view : null);
                 },
             ],
             [
@@ -216,58 +111,14 @@ Kirby::plugin('bnomei/janitor', [
         [
             'pattern' => 'plugin-janitor/(:any)/(:all)', // using (:all) fixes issues with kirbys routing for : and /
             'action' => function (string $secret, string $command) {
-                $janitor = Janitor::singleton();
-                if (Janitor::matchesSecret($janitor->option('secret'), $secret)) {
-                    $command = urldecode($command);
-
-                    if ($janitor->canDispatchCommand($command, 'public') === false) {
-                        return [
-                            'status' => 403,
-                        ];
-                    }
-
-                    if (! Str::contains($command, ' --quiet')) {
-                        $command .= ' --quiet';
-                    }
-
-                    return $janitor->command($command);
-                }
-
-                return [
-                    'status' => 401,
-                ];
+                return janitor()->webhook($secret, urldecode($command));
             },
         ],
         [
             'pattern' => 'plugin-janitor/(:any)',
             'method' => 'POST',
             'action' => function (string $secret) {
-                $janitor = Janitor::singleton();
-                if (Janitor::matchesSecret($janitor->option('secret'), $secret)) {
-                    $command = get('command');
-                    if (! is_string($command)) {
-                        return [
-                            'status' => 200,
-                            'info' => 'no command given',
-                        ];
-                    }
-
-                    if ($janitor->canDispatchCommand($command, 'public') === false) {
-                        return [
-                            'status' => 403,
-                        ];
-                    }
-
-                    if (! Str::contains($command, ' --quiet')) {
-                        $command .= ' --quiet';
-                    }
-
-                    return $janitor->command($command);
-                }
-
-                return [
-                    'status' => 401,
-                ];
+                return janitor()->webhook($secret, get('command'));
             },
         ],
     ],
@@ -298,14 +149,10 @@ Kirby::plugin('bnomei/janitor', [
             'janitor.maintenance.down' => 'im Wartungs-Modus',
             'janitor.maintenance.up' => 'online',
             'janitor.maintenance.notice' => 'Diese Webseite ist bald wieder online.', // in snippet
-            'janitor.render.message' => '{{ count }} Seiten gerendert',
+            'janitor.render.message' => '{{ count }} Seiten gerendert, {{ failed }} fehlgeschlagen, {{ thumbs }} Vorschaubilder gefunden',
         ],
     ],
 ]);
-
-if (! class_exists('Bnomei\Janitor')) {
-    require_once __DIR__.'/classes/Janitor.php';
-}
 
 if (! function_exists('janitor')) {
     function janitor(): Janitor
@@ -319,7 +166,7 @@ if (! function_exists('undertaker')) {
     {
         return janitor()->command(implode(' ', [
             'janitor:undertaker',
-            '--page '.$page->uuid()->toString(),
+            '--page '.Janitor::modelIdentifier($page),
             '--user '.kirby()->user()?->id(),
             '--quiet',
         ]));

@@ -2,10 +2,6 @@
 
 declare(strict_types=1);
 
-if (! class_exists('Bnomei\Janitor')) {
-    require_once __DIR__.'/../classes/Janitor.php';
-}
-
 use Bnomei\Janitor;
 use Kirby\CLI\CLI;
 
@@ -48,16 +44,10 @@ return [
             'status' => $down ? 203 : 200,
             // urls forwarded to janitor in `download` will trigger a download in panel.
             'message' => $message,
-            'label' => t(
+            'label' => tt(
                 'janitor.maintenance.label',
-                str_replace(
-                    '{{ status }}',
-                    site()->isUnderMaintenance()->ecco(
-                        t('janitor.maintenance.down', 'in maintenance'),
-                        t('janitor.maintenance.up', 'online')
-                    ),
-                    'Website is {{ status }}'
-                )
+                'Website is {{ status }}',
+                ['status' => $message]
             ),
             'icon' => $down ? 'cancel' : 'circle',
         ]);

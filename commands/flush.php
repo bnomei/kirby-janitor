@@ -2,10 +2,6 @@
 
 declare(strict_types=1);
 
-if (! class_exists('Bnomei\Janitor')) {
-    require_once __DIR__.'/../classes/Janitor.php';
-}
-
 use Kirby\CLI\CLI;
 
 return [

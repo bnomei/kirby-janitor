@@ -2,10 +2,6 @@
 
 declare(strict_types=1);
 
-if (! class_exists('Bnomei\Janitor')) {
-    require_once __DIR__.'/../classes/Janitor.php';
-}
-
 use Bnomei\Janitor;
 use Kirby\CLI\CLI;
 
@@ -44,13 +40,10 @@ return [
                     $result = $job($model, $cli->arg('data'));
                 }
                 if (is_null($result)) {
-                    $result = [];
-                    $result['status'] = 200;
+                    $result = ['status' => 200];
                 } elseif (is_bool($result)) {
-                    $result = [];
-                    $result['status'] = $result ? 200 : 204;
+                    $result = ['status' => $result ? 200 : 204];
                 } elseif (is_string($result)) {
-                    $result = [];
                     $result = [
                         'status' => 200,
                         'message' => $result,
@@ -67,6 +60,6 @@ return [
         (A::get($result, 'status') === 200 ? $cli->success($key) : $cli->error($key));
         $cli->out(print_r($result, true));
 
-        janitor()->data($cli->arg('command'), $result);
+        Janitor::finish($cli, $result);
     },
 ];

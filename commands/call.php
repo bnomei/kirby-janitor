@@ -2,10 +2,6 @@
 
 declare(strict_types=1);
 
-if (! class_exists('Bnomei\Janitor')) {
-    require_once __DIR__.'/../classes/Janitor.php';
-}
-
 use Bnomei\Janitor;
 use Kirby\CLI\CLI;
 
@@ -50,13 +46,10 @@ return [
                     $result = $model->$method($cli->arg('data'));
                 }
                 if (is_null($result)) {
-                    $result = [];
-                    $result['status'] = 200;
+                    $result = ['status' => 200];
                 } elseif (is_bool($result)) {
-                    $result = [];
-                    $result['status'] = $result ? 200 : 204;
+                    $result = ['status' => $result ? 200 : 204];
                 } elseif (is_string($result)) {
-                    $result = [];
                     $result = [
                         'status' => 200,
                         'message' => $result,
@@ -65,14 +58,14 @@ return [
             } else {
                 $result['message'] = t('janitor.method-not-found', 'Method "'.$method.'" could not be called on model of class <'.$model::class.'>.');
             }
+            (A::get($result, 'status') === 200 ? $cli->success($model::class.'->'.$method) : $cli->error($model::class.'->'.$method));
         } else {
             $result['message'] = t('janitor.model-not-found', 'No model provided');
             $cli->error('No model provided. Use `--page`, `--file`, `--user` or `--site`.');
         }
 
-        (A::get($result, 'status') === 200 ? $cli->success($model::class.'->'.$method) : $cli->error($model::class.'->'.$method));
         $cli->out(print_r($result, true));
 
-        janitor()->data($cli->arg('command'), $result);
+        Janitor::finish($cli, $result);
     },
 ];

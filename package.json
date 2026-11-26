@@ -2,7 +2,7 @@
     "private": true,
     "name": "kirby-janitor",
     "scripts": {
-        "dev": "kirbyup serve src/index.js",
+        "dev": "kirbyup dev src/index.js",
         "build": "kirbyup src/index.js",
         "lint": "eslint \"src/**/*.{js,vue}\"",
         "lint:fix": "npm run lint -- --fix",
@@ -12,8 +12,10 @@
         "eslint": "^8.0.1",
         "eslint-config-prettier": "^8.3.0",
         "eslint-plugin-vue": "^7.19.1",
-        "kirbyup": "^3.4.0",
-        "prettier": "^2.8.1",
-        "vite-plugin-node-polyfills": "^0.24.0"
+        "kirbyup": "^4.0.0",
+        "prettier": "^2.8.1"
+    },
+    "engines": {
+        "node": ">=24"
     }
 }

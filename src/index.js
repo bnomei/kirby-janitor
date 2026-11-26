@@ -1,8 +1,9 @@
 import Janitor from "./components/fields/Janitor.vue";
+import JanitorField from "./components/fields/JanitorField.vue";
 
-panel.plugin("bnomei/janitor", {
+window.panel.plugin("bnomei/janitor", {
 	fields: {
-		janitor: Janitor
+		janitor: JanitorField
 	},
 	viewButtons: {
 		janitor: Janitor

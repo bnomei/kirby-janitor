@@ -2,10 +2,6 @@
 
 declare(strict_types=1);
 
-if (! class_exists('Bnomei\Janitor')) {
-    require_once __DIR__.'/../classes/Janitor.php';
-}
-
 use Bnomei\Janitor;
 use Kirby\CLI\CLI;
 
@@ -13,8 +9,20 @@ return [
     'description' => 'Pipe `data` to `clipboard` arg in Janitor or on CLI use pbcopy',
     'args' => [] + Janitor::ARGS, // page, file, user, site, data, model
     'command' => static function (CLI $cli): void {
-        if (php_sapi_name() === 'cli') {
-            exec('echo "'.$cli->arg('data').'" | pbcopy');
+        if (PHP_SAPI === 'cli') {
+            $text = (string) $cli->arg('data');
+            $process = function_exists('proc_open') ? @proc_open(['pbcopy'], [0 => ['pipe', 'r']], $pipes) : false;
+            $copied = false;
+            if (is_resource($process)) {
+                $written = @fwrite($pipes[0], $text);
+                fclose($pipes[0]);
+                $copied = proc_close($process) === 0 && $written === strlen($text);
+            }
+            if (! $copied) {
+                Janitor::finish($cli, ['status' => 500, 'error' => 'Copy failed. The terminal clipboard requires pbcopy.']);
+
+                return;
+            }
             $cli->success('Copied "'.$cli->arg('data').'" to your clipboard.');
         }
 

@@ -2,10 +2,6 @@
 
 declare(strict_types=1);
 
-if (! class_exists('Bnomei\Janitor')) {
-    require_once __DIR__.'/../classes/Janitor.php';
-}
-
 use Bnomei\Janitor;
 use Kirby\CLI\CLI;
 use Kirby\Cms\Pages;
@@ -16,48 +12,34 @@ class JanitorCleanContentCommand
      * based on cookbook by @texnixe
      * https://getkirby.com/docs/cookbook/extensions/content-file-cleanup
      *
-     * @param  null|string[]  $ignore
-     *
-     * @psalm-param list{string, string,...}|null $ignore
+     * @param  string[]  $ignore
      */
-    public static function cleanUp(CLI $cli, Pages $collection, ?array $ignore = null, ?string $lang = null): int
+    public static function cleanUp(CLI $cli, Pages $collection, array $ignore, ?string $lang = null, int &$failed = 0): int
     {
         $updated = 0;
         foreach ($collection as $item) {
-            // get all fields in the content file
-            $contentFields = $item->content($lang)->fields();
+            // Read only stored fields, not Kirby's merged default-language fallbacks.
+            $version = $item->version();
+            $contentFields = array_keys($version->read($lang ?? 'default') ?? []);
 
-            // unset all fields in the `$ignore` array
-            foreach ($ignore as $field) {
-                if (array_key_exists($field, $contentFields) === true) {
-                    unset($contentFields[$field]);
-                }
-            }
-
-            // get the keys
-            $contentFields = array_keys($contentFields);
-
-            // get all field keys from blueprint
-            $blueprintFields = array_keys($item->blueprint()->fields());
+            // Kirby keeps the declared blueprint case, but content field keys are lowercase.
+            $blueprintFields = array_map(fn ($key) => strtolower((string) $key), array_keys($item->blueprint()->fields()));
 
             // get all field keys that are in $contentFields but not in $blueprintFields
-            $fieldsToBeDeleted = array_diff($contentFields, $blueprintFields);
+            $fieldsToBeDeleted = array_diff($contentFields, $blueprintFields, $ignore);
 
             // update page only if there are any fields to be deleted
             if (count($fieldsToBeDeleted) > 0) {
-                // flip keys and values and set new values to null
-                $data = array_map(function ($value) {
-                    return null;
-                }, array_flip($fieldsToBeDeleted));
-
-                // try to update the page with the data
                 try {
-                    $item->update($data, $lang);
-                    $updated++;
-                    $cli->green('+++ '.($lang ? '['.$lang.'] ' : '').$item->id());
+                    $version->update(array_fill_keys($fieldsToBeDeleted, null), $lang ?? 'default');
                 } catch (Exception $e) {
+                    $failed++;
                     $cli->red('ERR '.($lang ? '['.$lang.'] ' : '').$item->id().': '.$e->getMessage());
+
+                    continue;
                 }
+                $updated++;
+                $cli->green('+++ '.($lang ? '['.$lang.'] ' : '').$item->id());
             } else {
                 $cli->white('=== '.($lang ? '['.$lang.'] ' : '').$item->id());
             }
@@ -95,11 +77,12 @@ return [
         $time = time();
         $count = $collection->count();
         $updated = 0;
+        $failed = 0;
 
         // set the fields to be ignored
         $ignore = array_merge(
             explode(',', $cli->arg('core')),
-            explode(',', $cli->arg('ignore'))
+            explode(',', $cli->arg('ignore') ?? '')
         );
 
         // call the script for all languages if multilang
@@ -107,31 +90,29 @@ return [
             $count *= $kirby->languages()->count();
             $languages = $kirby->languages();
             foreach ($languages as $language) {
-                $updated += JanitorCleanContentCommand::cleanUp($cli, $collection, $ignore, $language->code());
+                $updated += JanitorCleanContentCommand::cleanUp($cli, $collection, $ignore, $language->code(), $failed);
             }
         } else {
-            $updated += JanitorCleanContentCommand::cleanUp($cli, $collection, $ignore);
+            $updated += JanitorCleanContentCommand::cleanUp($cli, $collection, $ignore, failed: $failed);
         }
 
         $data = [
-            'status' => $updated > 0 ? 200 : 204,
+            'status' => $failed > 0 ? 500 : ($updated > 0 ? 200 : 204),
             'duration' => time() - $time,
             'updated' => $updated,
+            'failed' => $failed,
             'count' => $count,
         ];
-        $data['message'] = t(
-            'janitor.cleancontent.message',
-            str_replace(
-                ['{{ updated }}', '{{ count }}'],
-                [$data['updated'], $data['count']],
-                '{{ updated }} / {{ count }} needed cleaning'
-            )
-        );
+        $data['message'] = $failed > 0
+            ? tt('janitor.cleancontent.failed', '{{ updated }} / {{ count }} cleaned, {{ failed }} failed', $data)
+            : tt('janitor.cleancontent.message', '{{ updated }} / {{ count }} needed cleaning', $data);
 
         $cli->blue($data['duration'].' sec');
         $cli->blue($data['count'].' checked');
-        $cli->success($data['updated'].' needed cleaning');
+        if ($failed === 0) {
+            $cli->success($data['updated'].' needed cleaning');
+        }
 
-        janitor()->data($cli->arg('command'), $data);
+        Janitor::finish($cli, $data);
     },
 ];

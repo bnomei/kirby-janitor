@@ -17,18 +17,12 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: 8.2
+          php-version: '8.3'
           tools: composer:v2
           coverage: none
 
-      - name: Cache composer dependencies
-        uses: actions/cache@v4
-        with:
-          path: vendor
-          key: composer-${{ hashFiles('composer.lock') }}
-
       - name: Install
-        run: composer kirby
+        run: composer install --no-interaction
 
       - name: Run PHPStan
         run: vendor/bin/phpstan --error-format=github

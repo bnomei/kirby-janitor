@@ -8,7 +8,6 @@ parameters:
         - collections/example_*.php
 
     ignoreErrors:
-        - '#Undefined variable: \$this#'
         - '#Call to an undefined method Kirby\\Cms\\Ingredients::#'
         - '#Static property Bnomei\\Janitor::\$singleton#'
         -

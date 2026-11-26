@@ -2,10 +2,6 @@
 
 declare(strict_types=1);
 
-if (! class_exists('Bnomei\Janitor')) {
-    require_once __DIR__.'/../classes/Janitor.php';
-}
-
 use Bnomei\Janitor;
 use Kirby\CLI\CLI;
 use Kirby\Cms\Media;
@@ -43,26 +39,21 @@ return [
         $finder->files()
             ->in($root)
             ->ignoreDotFiles(false)
-            ->name('/\.json$/');
+            ->path('#(?:^|/)\.jobs/[^/]+\.json$#');
         $countJobs = iterator_count($finder);
         $cli->blue($countJobs.' thumb job files found');
 
         // generate
-        $jobs = 0;
         $created = 0;
         $jobsFailed = [];
         $countJobs > 0 && $cli->out('Generating Thumbs...');
 
+        $pagesRoot = kirby()->roots()->media().'/pages/';
         foreach ($finder as $file) {
-            $jobs++;
-
-            $parentID = null;
-            $page = null;
-
-            $page = null;
-            if (preg_match('/.*\/media\/pages\/(.*)\/.*-[\d]*\/\.jobs/', $file->getPath(), $matches)) {
-                $page = page($matches[1]);
-            }
+            // <media>/pages/<page id>/<media hash>/.jobs/<thumbnail>.json
+            $hashDirectory = dirname($file->getPath());
+            $parentID = substr(dirname($hashDirectory), strlen($pagesRoot));
+            $page = page($parentID);
             if (! $page) {
                 $skip = '𐄂 '.$parentID.' => Page not found, removed job file';
                 $jobsFailed[] = $skip;
@@ -87,7 +78,7 @@ return [
                 continue;
             }
 
-            $hash = basename(str_replace('/.jobs', '', $file->getPath()));
+            $hash = basename($hashDirectory);
             if (Media::link($page, $hash, $jobFilename) !== false) {
                 $cli->out('✔ '.$file->getPath().'/'.$file->getFilename());
                 $created++;
@@ -110,11 +101,11 @@ return [
             'jobs' => $countJobs,
             'created' => $created,
             'failed' => count($jobsFailed),
-            'message' => t('janitor.thumbs.message', str_replace(
-                ['{{ created }}', '{{ failed }}'],
-                [$created, count($jobsFailed)],
-                '{{ created }} thumbs created, {{ failed }} failed'
-            )),
+            'message' => tt(
+                'janitor.thumbs.message',
+                '{{ created }} thumbs created, {{ failed }} failed',
+                ['created' => $created, 'failed' => count($jobsFailed)]
+            ),
         ]);
     },
 ];

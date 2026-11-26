@@ -1,7 +1,7 @@
 # Kirby Janitor
 
-[![Kirby 5](https://flat.badgen.net/badge/Kirby/5?color=ECC748)](https://getkirby.com)
-![PHP 8.2](https://flat.badgen.net/badge/PHP/8.2?color=4E5B93&icon=php&label)
+[![Kirby 6](https://flat.badgen.net/badge/Kirby/6?color=ECC748)](https://getkirby.com/releases/6)
+![PHP 8.3+](https://flat.badgen.net/badge/PHP/8.3+?color=4E5B93&icon=php&label)
 ![Release](https://flat.badgen.net/packagist/v/bnomei/kirby-janitor?color=ae81ff&icon=github&label)
 [![Discord](https://flat.badgen.net/badge/discord/bnomei?color=7289da&icon=discord&label)](https://discordapp.com/users/bnomei)
 [![Buymecoffee](https://flat.badgen.net/badge/icon/donate?icon=buymeacoffee&color=FF813F&label)](https://www.buymeacoffee.com/bnomei)
@@ -16,14 +16,16 @@ Janitor is a Kirby CMS Plugin for running commands.
 
 ## Install
 
-You have to use composer to install both the plugin and the CLI locally into your project:
+Janitor 6 requires Kirby 6 and PHP 8.3 or newer. On Kirby 5, stay on Janitor 5 (`^5`). From your Kirby 6 project, install Janitor and its local CLI dependency with Composer:
 
 ```bash
-composer require getkirby/cli bnomei/kirby-janitor
+composer require bnomei/kirby-janitor:^6
 ```
 
 > [!WARNING]
 > You need to install the CLI with composer into your project and not use the global version. Since Janitor depends on the CLI to be available, installing only the janitor plugin via submodules or via ZIP is NOT supported.
+
+The Panel assets are included. To rebuild them, use Node 24+ and run `npm ci && npm run build`.
 
 ## Setup
 
@@ -140,7 +142,7 @@ This plugin comes with a [few commands](https://github.com/bnomei/kirby-janitor/
 - `janitor:backupzip`, creates a backup zip
 - `janitor:call`, calls a method on the current model with optional data parameter
 - `janitor:cleancontent`, removes fields from content file that are not defined in your blueprints
-- `janitor:clipboard`, copies a defined value to your clipboard
+- `janitor:clipboard`, copies a defined value to your clipboard (terminal: requires `pbcopy`)
 - `janitor:download`, triggers a browser download of an URL in the Panel; in CLI it downloads valid http(s) URLs via `wget`
 - `janitor:flush`, flush a cache by providing its name (default: pages cache)
 - `janitor:job`, run a callback
@@ -193,26 +195,38 @@ permissions:
     commands.janitor.backupzip: false
 ```
 
-The same permission keys can also be written as nested YAML arrays if you prefer that style.
+Use flat dotted keys for installed CLI commands. More specific rules override wildcards such as `commands.*` or `commands.janitor.*`.
 
 ### Blueprint field options
 
-The button you create with the `field: janitor` in your blueprint can be configured to do various things. Checkout the [example default.yml blueprint](https://github.com/bnomei/kirby-janitor/blob/master/tests/site/blueprints/pages/default.yml) to familiarize yourself with how to use it.
+Use `type: janitor` for a single button or add `buttons` for a list. See the [example blueprint](tests/site/blueprints/pages/default.yml).
+
+> [!NOTE]
+> Janitor is mostly compatible with Kirby's [buttons field](https://getkirby.com/docs/reference/panel/fields/buttons). Use one action per button: `command`, `link`, `dialog` or `drawer`.
 
 - `autosave`, if `true` then save before pressing the button
 - `backgroundColor`, sets backgroundColor of button
+- `badge`, badge at the top right, e.g. `{ text: 3, theme: info }`
+- `buttons`, list of buttons or a [page method](https://getkirby.com/docs/reference/panel/fields/buttons#buttons-from-a-query) like `buttons: page.articleTools` returning a list of zero, one or more buttons
 - `color`, sets text color of button
 - `confirm`, sets text for confirmation after clicking the button and before executing the command, can prevent the execution of the command if the user clicks `cancel` in the OS dialog
 - `command`, command like you would enter it in terminal, with [query language support](https://getkirby.com/docs/guide/blueprints/query-language) and page/file/user/site/data arguments
 - `cooldown`, time in milliseconds the message is flashed on the button (default: 2000)
+- `dialog`, path of a Panel dialog to open
+- `disabled`, if `true` then disable the button
+- `drawer`, path of a Panel drawer to open
 - `error`, set message on button to show on all **non-200**-status returns with query language support, also will print to `console.error()`
 - `headline`, set headline of the button, use `headline: " "` for better alignment with custom `width`s
 - `help`, set help of the button
 - `icon`, set the [icon](https://getkirby.com/docs/reference/panel/icons) of the button
 - `intab`, if `true` then use in combination with the `open`-option to open an URL in a new tab
-- `label`, set label of the button
+- `label` / `text`, button caption (`text` wins); on a field with `buttons`, `label` is the group heading
+- `link`, URL or Panel path to open
 - `progress`, set message to show while the button waits for the response, with query language support
 - `success`, set message to show on all **200**-status returns, with query language support
+- `target`, link target, e.g. `_blank`
+- `theme`, Panel button theme, e.g. `positive` or `purple-icon`
+- `title`, button tooltip
 - `unsaved`, if `false` then disable the button if panel view has unsaved content
 
 ### Janitor API options
@@ -424,12 +438,12 @@ http://dev.bnomei.com/plugin-janitor/e9fe51f94eadabf54/janitor%3Athumbs%20--site
 
 #### Webhook with wget or curl
 
-You can also use the secret to trigger a job using wget or curl.
+Public webhooks return HTTP 4xx/5xx on failure. Use `curl -f` so cron gets a nonzero exit code.
 
 ```php
 wget https://dev.bnomei.com/plugin-janitor/e9fe51f94eadabf54/janitor%3Abackupzip --delete-after
 // or
-curl -s https://dev.bnomei.com/plugin-janitor/e9fe51f94eadabf54/janitor%3Abackupzip > /dev/null
+curl -fsS https://dev.bnomei.com/plugin-janitor/e9fe51f94eadabf54/janitor%3Abackupzip > /dev/null
 ```
 
 Are you having issues with PHP bin and cron? [read this](https://github.com/bnomei/kirby-janitor/issues/105).

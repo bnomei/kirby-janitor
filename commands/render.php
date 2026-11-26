@@ -2,10 +2,6 @@
 
 declare(strict_types=1);
 
-if (! class_exists('Bnomei\Janitor')) {
-    require_once __DIR__.'/../classes/Janitor.php';
-}
-
 use Bnomei\Janitor;
 use Bnomei\Lapse;
 use Kirby\CLI\CLI;
@@ -63,14 +59,8 @@ class JanitorRenderCommand
                 } else {
                     $content = $this->renderPageContent($pageId);
                 }
-                if (strlen($content) > 0) {
-                    $thumbs = $this->findUrlOfThumbsInContent($content);
-                    $thumbs = array_unique($thumbs);
-                    $this->foundThumbs = array_merge(
-                        $this->foundThumbs,
-                        $thumbs
-                    );
-                }
+                $thumbs = array_unique($this->findUrlOfThumbsInContent($content ?? ''));
+                $this->foundThumbs = array_merge($this->foundThumbs, $thumbs);
                 $cli->out('['.count($thumbs).'] '.$pageId);
             } catch (Exception $ex) {
                 $this->renderFailed[] = $pageId.' => '.$ex->getMessage();
@@ -83,19 +73,16 @@ class JanitorRenderCommand
         $duration = time() - $time;
 
         $data = [
-            'status' => $this->visitedPages === 0 || count($this->renderFailed) ? 204 : 200,
+            'status' => $this->renderFailed !== [] ? 500 : ($this->visitedPages === 0 ? 204 : 200),
             'duration' => $duration,
-            'count' => $this->visitedPages,
+            'count' => $this->visitedPages - count($this->renderFailed),
             'foundThumbs' => count($this->foundThumbs),
             'renderFailed' => count($this->renderFailed),
         ];
-        $data['message'] = t(
+        $data['message'] = tt(
             'janitor.render.message',
-            str_replace(
-                ['{{ count }}', '{{ failed }}', '{{ thumbs }}'],
-                [$data['count'], $data['renderFailed'], $data['foundThumbs']],
-                '{{ count }} pages rendered, {{ failed }} failed, {{ thumbs }} thumbs found'
-            )
+            '{{ count }} pages rendered, {{ failed }} failed, {{ thumbs }} thumbs found',
+            ['count' => $data['count'], 'failed' => $data['renderFailed'], 'thumbs' => $data['foundThumbs']]
         );
 
         $cli->blue($data['duration'].' sec');
@@ -108,11 +95,9 @@ class JanitorRenderCommand
         foreach ($this->renderFailed as $fail) {
             $cli->red($fail);
         }
-        $cli->success(
-            $data['count'].' pages rendered'
-        );
+        $cli->out($data['count'].' pages rendered');
 
-        janitor()->data($cli->arg('command'), $data);
+        Janitor::finish($cli, $data);
     }
 
     private function getPageIDs(CLI $cli): array
@@ -194,11 +179,21 @@ class JanitorRenderCommand
         return $content;
     }
 
-    private function remotePageContent(string $pageId): ?string
+    private function remotePageContent(string $pageId): string
     {
-        $content = Remote::get($this->renderSiteUrl.'/'.$pageId)->content();
+        $urls = [$this->renderSiteUrl.'/'.$pageId];
         foreach (kirby()->languages() as $lang) {
-            $content .= Remote::get($this->renderSiteUrl.'/'.$lang->code().'/'.$pageId)->content();
+            $urls[] = $this->renderSiteUrl.'/'.$lang->code().'/'.$pageId;
+        }
+
+        $content = '';
+        foreach ($urls as $url) {
+            $response = Remote::get($url);
+            $code = $response->code();
+            if ($code < 200 || $code >= 300 || in_array($code, [204, 205], true)) {
+                throw new RuntimeException('HTTP '.$code.' rendering '.$url);
+            }
+            $content .= $response->content();
         }
 
         return $content;

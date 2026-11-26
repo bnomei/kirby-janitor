@@ -8,11 +8,45 @@ buttons:
       command: whistle
       label: Whistle
       icon: audio
+  rename:
+    component: k-janitor-view-button
+    props:
+      text: Rename
+      dialog: "{{ page.panel.path }}/changeTitle"
+      icon: title
   open: true
   preview: true
   settings: true
 
 fields:
+
+  renamePage:
+    type: janitor
+    text: "Rename {{ page.title }}"
+    dialog: "{{ page.panel.path }}/changeTitle"
+    theme: purple-icon
+    icon: title
+
+  tools:
+    type: janitor
+    label: Page tools
+    buttons:
+      - text: Echo page UUID
+        command: uuid
+        theme: info
+        title: Show the current page identifier
+        icon: tag
+      - text: Account security
+        drawer: account/security
+        icon: lock
+      - text: View page
+        link: "{{ page.url }}"
+        target: _blank
+        icon: open
+      - text: Unavailable command
+        command: whistle
+        disabled: true
+        badge: { text: Off, theme: notice }
 
   text:
     type: text

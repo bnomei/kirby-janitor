@@ -4,13 +4,19 @@ declare(strict_types=1);
 
 namespace Bnomei;
 
+use Kirby\Blueprint\Blueprint;
 use Kirby\CLI\CLI;
 use Kirby\Cms\File;
+use Kirby\Cms\Find;
 use Kirby\Cms\Page;
 use Kirby\Cms\Site;
 use Kirby\Cms\User;
+use Kirby\Data\Data;
+use Kirby\Exception\InvalidArgumentException;
+use Kirby\Http\Response;
 use Kirby\Toolkit\A;
 use Kirby\Toolkit\Str;
+use Kirby\Uuid\Uuids;
 
 final class Janitor
 {
@@ -54,6 +60,19 @@ final class Janitor
     public const PERMISSION_CATEGORY = 'bnomei.janitor';
 
     private static array $data = [];
+
+    private static bool $dispatching = false;
+
+    public static function finish(CLI $cli, array $result): void
+    {
+        janitor()->data($cli->arg('command'), $result);
+
+        // Kirby turns exceptions into nonzero terminal exits. Embedded callers
+        // (including PHP scripts on the CLI) need the result instead.
+        if (! self::$dispatching && PHP_SAPI === 'cli' && ($result['status'] ?? 200) >= 400) {
+            throw new \RuntimeException($result['error'] ?? $result['message'] ?? 'Command failed');
+        }
+    }
 
     public function data(string $command, ?array $data = null): ?array
     {
@@ -130,6 +149,17 @@ final class Janitor
         return array_values(array_unique($candidates));
     }
 
+    public static function registerCommandPermissions(): void
+    {
+        $actions = ['commands.*' => true];
+        foreach ((new CLI)->commands() as $commands) {
+            foreach ($commands as $name) {
+                $actions += array_fill_keys(self::commandPermissionCandidates($name), true);
+            }
+        }
+        kirby()->extend(['permissions' => [self::PERMISSION_CATEGORY => $actions]]);
+    }
+
     /**
      * @param  array<mixed, mixed>  $permissions
      */
@@ -198,9 +228,19 @@ final class Janitor
             $user = kirby()->user();
 
             if ($user instanceof User) {
-                $permissions = $user->role()->permissions()->toArray()[self::PERMISSION_CATEGORY] ?? [];
-
-                if (is_array($permissions) && self::commandAllowedByPermissions($commandName, $permissions) === false) {
+                // These are role permissions in the plugin's category, not model actions.
+                $role = $user->role();
+                $permissions = $role->permissions()->toArray()[self::PERMISSION_CATEGORY] ?? [];
+                // Kirby fills in all registered actions. Only role overrides should take
+                // precedence over commands.* or a namespace wildcard.
+                if (in_array(false, $permissions, true)) {
+                    $file = kirby()->root('roles').'/'.$role->id().'.yml';
+                    $blueprint = Blueprint::extend(is_file($file) ? Data::read($file) : 'users/'.$role->id());
+                    $rules = $blueprint['permissions'][self::PERMISSION_CATEGORY] ?? [];
+                    $permissions = array_intersect_key($permissions, ['commands.*' => true] + (array) $rules)
+                        + array_filter($permissions, static fn ($value) => $value !== ($rules['*'] ?? true));
+                }
+                if (self::commandAllowedByPermissions($commandName, $permissions) === false) {
                     return false;
                 }
             }
@@ -209,16 +249,36 @@ final class Janitor
         return true;
     }
 
-    public function command(string $command): array
+    public function webhook(string $secret, mixed $command): Response
+    {
+        $result = match (true) {
+            ! self::matchesSecret($this->option('secret'), $secret) => ['status' => 401],
+            ! is_string($command) || trim($command) === '' => ['status' => 400, 'info' => 'no command given'],
+            ! $this->canDispatchCommand($command, 'public') => ['status' => 403],
+            default => $this->command($command),
+        };
+        $status = $result['status'] ?? 200;
+
+        // Keep the JSON body for successful no-ops (Janitor status 204).
+        return Response::json($result, $status >= 400 && $status <= 599 ? $status : 200);
+    }
+
+    public function command(string $command, ?string $view = null): array
     {
         if (php_sapi_name() !== 'cli' && ! Str::contains($command, ' --quiet')) {
             $command .= ' --quiet';
         }
 
         [$name, $args] = Janitor::parseCommand($command);
-        $args = Janitor::resolveQueriesInCommand($args); // like a "lazy/smart" `{( page.callme )}`
+        $args = Janitor::resolveQueriesInCommand($args, $view); // like a "lazy/smart" `{( page.callme )}`
 
-        CLI::command($name, ...$args);
+        $previous = self::$dispatching;
+        self::$dispatching = true;
+        try {
+            CLI::command($name, ...$args);
+        } finally {
+            self::$dispatching = $previous;
+        }
 
         return $this->data($name) ?? [
             'status' => 200,
@@ -231,18 +291,13 @@ final class Janitor
         return Janitor::resolveModel($uuid);
     }
 
-    private static function modelIdentifier(Page|File|User|Site $model): string
+    public static function modelIdentifier(Page|File|User|Site $model): string
     {
-        $uuid = $model->uuid()->toString();
-        if ($uuid !== '') {
-            return $uuid;
-        }
-
         if ($model instanceof Site) {
             return 'site://';
         }
 
-        return $model->id();
+        return Uuids::enabled() ? $model->uuid()->toString() : $model->id();
     }
 
     private static ?self $singleton;
@@ -370,7 +425,7 @@ final class Janitor
         return $flat;
     }
 
-    public static function query(mixed $template = null, mixed $model = null): string
+    public static function query(mixed $template = null, mixed $model = null, ?string $fallback = null): string
     {
         // array|Closure|string|null could be passed from I18n::translate
         if (! is_string($template)) {
@@ -398,6 +453,10 @@ final class Janitor
             'file' => $file,
             'user' => $user,
             'model' => $model,
+        ], [
+            // Kirby also accepts single braces. Don't resolve Janitor's {( lazy )} placeholders yet.
+            'start' => '(?:{{|{<|{(?=[^(]))',
+            'fallback' => $fallback,
         ]);
     }
 
@@ -422,8 +481,12 @@ final class Janitor
         return (bool) $isBlocked;
     }
 
-    public static function resolveModel(string $uuid): mixed
+    public static function resolveModel(?string $uuid): mixed
     {
+        if ($uuid === null || $uuid === '') {
+            return null;
+        }
+
         if (Str::startsWith($uuid, 'page://')) {
             return kirby()->page($uuid);
         } elseif (Str::startsWith($uuid, 'file://')) {
@@ -447,10 +510,12 @@ final class Janitor
      * @param  list<string>  $args
      * @return list<string>
      */
-    public static function resolveQueriesInCommand(array $args): array
+    public static function resolveQueriesInCommand(array $args, ?string $view = null): array
     {
         $model = null;
-        $modelKey = array_search('--model', $args);
+        // parseCommand returns flag/value pairs; a value may itself look like a flag.
+        $flags = array_filter($args, static fn (int $i) => $i % 2 === 0, ARRAY_FILTER_USE_KEY);
+        $modelKey = array_search('--model', $flags, true);
 
         if ($modelKey !== false) {
             $modelId = $modelKey + 1 < count($args) ? $args[$modelKey + 1] : null;
@@ -458,42 +523,30 @@ final class Janitor
                 return $args; // @codeCoverageIgnore
             }
             $model = Janitor::resolveModel($modelId);
-        }
-
-        $path = get('path');
-        if ($modelKey === false && ! $model && is_string($path)) {
-            // infer model (page or page draft) from current panel path
-            if (Str::contains($path, 'panel/site')) {
-                $model = kirby()->site();
-            } elseif (Str::contains($path, 'panel/pages') && array_search('--page', $args) === false) {
-                $id = trim(str_replace(['panel/pages', '+'], ['', '/'], $path), '/');
-                $page = kirby()->page($id);
-                if ($page instanceof Page) {
-                    $model = $page;
-                    $args[] = '--page';
-                    $args[] = Janitor::modelIdentifier($page);
+        } elseif ($view !== null) {
+            $targets = array_intersect(['--site', '--page', '--file', '--user'], $flags);
+            if ($targets !== []) {
+                $type = reset($targets);
+                $id = $args[array_search($type, $flags, true) + 1] ?? '';
+                $model = match ($type) {
+                    '--site' => kirby()->site(),
+                    '--page' => $id !== '' ? kirby()->page($id) : null,
+                    '--file' => $id !== '' ? kirby()->file($id) : null,
+                    '--user' => $id !== '' ? kirby()->user($id) : null,
+                };
+                if ($model !== null) {
+                    array_push($args, '--model', $model instanceof Site ? 'site://' : $id);
                 }
-            } elseif (Str::contains($path, 'panel/users') && array_search('--user', $args) === false) {
-                $id = trim(str_replace(['panel/users', '+'], ['', '/'], $path), '/');
-                $user = kirby()->user($id);
-                if ($user instanceof User) {
-                    $model = $user;
-                    $args[] = '--user';
-                    $args[] = Janitor::modelIdentifier($user);
+            } else {
+                try {
+                    $model = Find::parent($view);
+                } catch (InvalidArgumentException) {
+                    // A custom Panel area need not have a model. Not-found and access errors still propagate.
                 }
-            } elseif (Str::contains($path, 'panel/account') && array_search('--user', $args) === false) {
-                // $id = trim(str_replace(['panel/account', '+'], ['', '/'], $path), '/');
-                $user = kirby()->user();
-                if ($user instanceof User) {
-                    $model = $user;
-                    $args[] = '--user';
-                    $args[] = Janitor::modelIdentifier($user);
+                if ($model instanceof Page || $model instanceof File || $model instanceof User || $model instanceof Site) {
+                    $id = self::modelIdentifier($model);
+                    array_push($args, '--'.$model::CLASS_ALIAS, $model instanceof Site ? '' : $id, '--model', $id);
                 }
-            }
-
-            if ($model instanceof Page || $model instanceof User || $model instanceof Site) {
-                $args[] = '--model';
-                $args[] = Janitor::modelIdentifier($model);
             }
         }
 

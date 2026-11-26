@@ -8,14 +8,20 @@
 			:id="id"
 			:class="['k-button janitor', button.state]"
 			:icon="currentIcon"
-			:command="command"
-			:disabled="!unsaved && !isUnsaved && hasChanges"
+			:text="button.label || responseLabel || text || label"
+			:title="title"
+			:badge="badge"
+			:dialog="dialog"
+			:drawer="drawer"
+			:link="link"
+			:target="target"
+			:disabled="isDisabled"
+			:dropdown="listItem && !command && !isDisabled"
 			:style="buttonStyle"
+			:theme="button.theme || theme"
 			variant="filled"
 			@click="runJanitor"
-		>
-			{{ button.label || label }}
-		</k-button>
+		/>
 		<a
 			v-show="downloadRequest"
 			ref="downloadAnchor"
@@ -34,27 +40,39 @@
 </template>
 
 <script>
-const STORAGE_ID = "janitor.runAfterAutosave";
+import { useId } from "vue";
 
 export default {
 	props: {
 		autosave: Boolean,
 		backgroundColor: String,
+		badge: Object,
 		clipboard: Boolean,
 		color: String,
 		confirm: String,
 		command: String,
 		cooldown: Number,
+		dialog: String,
+		disabled: Boolean,
+		drawer: String,
 		error: String,
 		icon: String,
 		intab: Boolean,
 		help: String,
 		label: String,
+		link: String,
+		listItem: Boolean,
 		headline: String,
 		progress: String,
 		success: String,
-		status: String,
-		unsaved: Boolean
+		target: String,
+		text: String,
+		theme: String,
+		title: String,
+		unsaved: { type: Boolean, default: true }
+	},
+	setup() {
+		return { id: `janitor-${useId()}` };
 	},
 
 	data() {
@@ -64,6 +82,7 @@ export default {
 				state: null,
 				headline: null,
 				help: null,
+				theme: null,
 				style: null
 			},
 			clipboardRequest: null,
@@ -73,12 +92,24 @@ export default {
 				"is-success": "check",
 				"has-error": "alert"
 			},
-			isUnsaved: false,
+			responseIcon: null,
+			responseLabel: null,
+			resetTimer: null,
 			urlRequest: null
 		};
 	},
 
 	computed: {
+		isDisabled() {
+			return (
+				this.disabled ||
+				[this.command, this.link, this.dialog, this.drawer].filter(
+					Boolean
+				).length !== 1 ||
+				this.button.state === "is-running" ||
+				(!this.unsaved && this.hasChanges)
+			);
+		},
 		buttonStyle() {
 			return (
 				this.button.style || {
@@ -88,95 +119,55 @@ export default {
 			);
 		},
 		currentIcon() {
-			return this.icons[this.status] ?? this.icon;
-		},
-		id() {
 			return (
-				"janitor-" +
-				this.hashCode(
-					this.command + (this.button.label ?? "") + this.label
-				)
+				this.icons[this.button.state] ?? this.responseIcon ?? this.icon
 			);
 		},
 		hasChanges() {
-			return Object.keys(this.$panel.content.diff()).length > 0;
-		}
-	},
-
-	created() {
-		this.eventHandler = () =>
-			sessionStorage.getItem(STORAGE_ID) && location.reload();
-		window.panel.events.on("model.update", this.eventHandler);
-
-		if (sessionStorage.getItem(STORAGE_ID) === this.id) {
-			sessionStorage.removeItem(STORAGE_ID);
-			this.runJanitor();
+			return this.$panel.content.hasDiff();
 		}
 	},
 
 	unmounted() {
-		window.panel.events.off("model.update", this.eventHandler);
+		clearTimeout(this.resetTimer);
 	},
 
 	methods: {
-		/**
-		 * Source: https://stackoverflow.com/a/8831937
-		 */
-		hashCode(str) {
-			let hash = 0;
-
-			if (str.length === 0) {
-				return hash;
-			}
-
-			for (const i of str) {
-				hash = (hash << 5) - hash + str.charCodeAt(i);
-				// convert to 32bit integer
-				hash = hash & hash;
-			}
-
-			return hash;
-		},
-
 		async runJanitor() {
+			if (!this.command || this.isDisabled) {
+				return;
+			}
+
 			if (this.confirm && !window.confirm(this.confirm)) {
 				return;
 			}
 
-			if (this.autosave && this.hasChanges) {
-				// lock janitor button, press save and listen to `model.update` event
-				const saveButton = document.querySelector(
-					".k-panel .k-header-buttons .k-form-controls button:nth-child(2)"
-				);
-
-				// revert & save
-				if (saveButton) {
-					this.isUnsaved = false;
-					sessionStorage.setItem(STORAGE_ID, this.id);
-					this.simulateClick(saveButton);
-					return;
-				}
-			}
-
-			if (this.clipboardRequest) {
+			clearTimeout(this.resetTimer);
+			if (this.clipboardRequest !== null) {
 				await this.copyToClipboard(this.clipboardRequest);
+				if (this.clipboardRequest === null) this.resetButton();
+				return;
+			}
+
+			try {
+				if (this.autosave && this.hasChanges) {
+					await this.$panel.content.publish();
+					if (this.hasChanges) return;
+				}
+				await this.postRequest("plugin-janitor", {
+					command: this.command,
+					view: this.$panel.view.props.api
+				});
+			} catch (error) {
 				this.resetButton();
-				this.clipboardRequest = null;
-				return;
+				this.$panel.notification.error(error.message);
 			}
-
-			if (this.status) {
-				return;
-			}
-
-			await this.postRequest("plugin-janitor", {
-				command: this.command,
-				path: window.location.pathname
-			});
 		},
 
 		async postRequest(path, data) {
-			this.button.label = this.progress ?? `${this.label} …`;
+			this.button.label =
+				this.progress ||
+				`${this.responseLabel || this.text || this.label} …`;
 			this.button.state = "is-running";
 
 			const {
@@ -207,7 +198,7 @@ export default {
 			}
 
 			if (label) {
-				this.label = label;
+				this.responseLabel = label;
 			}
 
 			if (message) {
@@ -223,20 +214,15 @@ export default {
 			}
 
 			if (icon) {
-				this.icon = icon;
+				this.responseIcon = icon;
 			}
 
-			this.button.style = {
-				color: "white",
-				reset: true
-			};
+			this.button.style = { reset: true };
 			if (status) {
 				this.button.state = status === 200 ? "is-success" : "has-error";
-				this.button.style.backgroundColor =
-					status === 200
-						? "var(--color-positive)"
-						: "var(--color-negative-light)";
+				this.button.theme = status === 200 ? "positive" : "negative";
 			} else {
+				this.button.theme = null;
 				this.button.state = "has-response";
 			}
 
@@ -293,27 +279,21 @@ export default {
 				});
 			}
 
-			if (clipboard) {
-				this.clipboardRequest = clipboard;
+			if (typeof clipboard === "string") {
 				this.button.label = this.progress;
-				this.button.state = "is-success";
-
-				setTimeout(this.resetButton, this.cooldown);
-
-				this.$nextTick(() => {
-					this.copyToClipboard(this.clipboardRequest);
-				});
-			} else {
-				setTimeout(this.resetButton, this.cooldown || 2000);
+				await this.copyToClipboard(clipboard);
 			}
+
+			this.resetTimer = setTimeout(this.resetButton, this.cooldown ?? 2000);
 		},
 
 		resetButton() {
 			this.button.label = null;
 			this.button.state = null;
-			this.button.style = this.button.style?.reset
-				? null
-				: this.button.style;
+			this.button.theme = null;
+			if (this.button.style?.reset) {
+				this.button.style = null;
+			}
 		},
 
 		simulateClick(element) {
@@ -334,25 +314,28 @@ export default {
 			document.body.prepend(textArea);
 			textArea.select();
 			try {
-				if (document.execCommand("copy") === false) {
-					console.error(
-						"Using `navigator.clipboard` did not work most likely due to the Kirby Panel running on localhost or no https. Janitor then tried to copy with a textarea but that failed as well."
-					);
-				}
+				return document.execCommand("copy");
 			} catch (error) {
 				console.error(error);
+				return false;
 			} finally {
 				textArea.remove();
 			}
 		},
 
 		async copyToClipboard(content) {
+			this.button.state = "is-running";
+			let copied;
 			try {
 				await navigator.clipboard.writeText(content);
-			} catch (error) {
-				console.error(error);
-				this.copyToClipboardWithTextarea(content);
+				copied = true;
+			} catch {
+				copied = this.copyToClipboardWithTextarea(content);
 			}
+			// Only retry this value on the next click if both copy methods failed.
+			this.clipboardRequest = copied ? null : content;
+			this.button.state = copied ? "is-success" : "has-error";
+			this.button.theme = copied ? "positive" : "negative";
 		}
 	}
 };
